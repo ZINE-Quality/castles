@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<!-- 
+  🎮 BUILDER BROS - BOSS EDITION
+  ================================
+  This is a video game made entirely in a web browser!
+  It uses three languages:
+    - HTML  = the skeleton (buttons, screens, text boxes)
+    - CSS   = the makeup (colors, fonts, animations)
+    - JavaScript = the brain (all the actual game logic!)
+  
+  Read the comments (lines starting with // or between these arrow symbols)
+  to learn how it all works!
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Builder Bros. - Boss Edition</title>
+
+<style>
+  /*
+    CSS STYLES
+    ===========
+    CSS is like a costume designer for your game.
+    Each block says "find this thing and make it look like THIS."
+    For example: #startBtn means "find the element with id="startBtn""
+    and then we tell it what color, size, shape etc. to be!
+  */
+
+  /* Load two cool retro fonts from Google's free font library */
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
+
+  /* 
+    Make EVERY element use "border-box" sizing.
+    This means padding is counted INSIDE the width, not added on top.
+    Also wipe out all default spacing browsers add automatically.
+  */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* 
+    :root is like a color dictionary for our game.
+    We name colors so we can say "var(--green)" anywhere instead of "#88ff88".
+    Change one line here and the whole color scheme updates everywhere!
+  */
+  :root {
+    --green: #88ff88;           /* bright lime green - our main color */
+    --red: #ff4444;             /* danger red */
+    --gold: #ffd700;            /* shiny gold for scores and level ups */
+    --dark: #000;               /* plain black */
+    --panel: rgba(0,20,0,0.85); /* dark green semi-transparent panel */
+  }
+
+  /* Make the whole page black and hide scrollbars (it's a game, not a website!) */
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;             /* no scrollbars! */
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);          /* default text is green */
+  }
+
+  canvas { display: block; } /* the game canvas sits as its own block */
+
+  /* 
+    THE HUD (Heads-Up Display)
+    The strip at the TOP showing HP, score, boss timer etc.
+    position:fixed means it stays in place even if the world scrolls.
+  */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0; /* glued to the top */
+    display: flex; align-items: center; gap: 16px; /* items in a row */
+    padding: 8px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid #1a4a1a; /* thin dark green line under it */
+    z-index: 900;          /* z-index = layering. 900 = in front of the game */
+    font-size: 13px;
+    backdrop-filter: blur(4px); /* frosted glass effect! blurs the game behind it */
+  }
+  #hud .section { display: flex; align-items: center; gap: 8px; }
+  #hud .sep { color: #1a4a1a; font-size: 18px; } /* the | dividers between sections */
+
+  /* HP bar: a colored rectangle that shrinks as you take damage */
+  #hpBar { width: 120px; height: 12px; background: #111; border: 1px solid #333; border-radius: 2px; overflow: hidden; }
+  /* The fill goes red to orange. transition:width makes it animate smoothly! */
+  #hpFill { height: 100%; background: linear-gradient(90deg,#ff4444,#ff8800); transition: width 0.2s; border-radius: 2px; }
+
+  #bossTimerVal { color: var(--gold); font-family: 'Press Start 2P', monospace; font-size: 11px; }
+  #dayLabel { font-family: 'Press Start 2P', monospace; font-size: 10px; min-width: 80px; text-align:right; }
+  #scoreVal { color: var(--gold); }   /* score shown in gold */
+  #levelVal { color: #88ffff; }       /* level shown in cyan */
+  .hud-label { color: #448844; font-size: 11px; } /* dim green labels like "HP", "LVL" */
+
+  /* 
+    CONTROLS BAR - the strip at the BOTTOM showing keyboard shortcuts.
+    Same idea as the HUD but stuck to the bottom.
+  */
+  #controls {
+    position: fixed; bottom: 0; left: 0; right: 0; /* glued to the bottom */
+    background: var(--panel);
+    border-top: 1px solid #1a4a1a;
+    padding: 5px 12px;
+    font-size: 11px; color: #448844;
+    z-index: 900;
+    display: flex; gap: 12px; flex-wrap: wrap; /* wrap to next line if too narrow */
+    backdrop-filter: blur(4px);
+  }
+  #controls span { color: var(--green); }
+
+  /* 
+    TITLE SCREEN - The very first screen you see.
+    It covers everything (inset:0 fills the whole window).
+    justify-content:center puts everything in the middle.
+  */
+  #titleScreen {
+    position: fixed; inset: 0; /* inset:0 = top:0 right:0 bottom:0 left:0 all at once */
+    background: #000;
+    display: flex; flex-direction: column; /* stack children vertically */
+    justify-content: center; align-items: center; /* center everything */
+    z-index: 2000; text-align: center; /* z-index 2000 = on top of the game */
+    gap: 16px; /* space between each child element */
+  }
+
+  /* The ASCII art logo - tiny text characters arranged to make a picture! */
+  #ascii {
+    font-size: 9px; line-height: 13px;
+    color: var(--green);
+    text-shadow: 0 0 8px #88ff88, 0 0 20px #44aa44; /* green glow effect */
+    letter-spacing: 0;
+    animation: flicker 4s infinite; /* use the flicker animation defined below */
+  }
+
+  /* 
+    @keyframes = describes an animation step by step.
+    "flicker" makes the opacity (visibility) vary slightly,
+    like an old TV screen or a neon sign flickering!
+  */
+  @keyframes flicker {
+    0%,100%{opacity:1}   /* fully visible at start and end */
+    92%{opacity:1}        /* still fully visible at 92%... */
+    93%{opacity:0.85}     /* ...quick dip to slightly dim... */
+    95%{opacity:1}        /* ...back to full... */
+    97%{opacity:0.9}      /* ...another tiny dip */
+  }
+
+  /* "BOSS EDITION" title text in big gold letters */
+  #titleText {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: var(--gold);
+    text-shadow: 0 0 12px var(--gold); /* golden glow */
+    letter-spacing: 2px;
+  }
+
+  #subtitleText { color: #448844; font-size: 13px; max-width: 560px; line-height: 1.6; }
+
+  /* The green START GAME button */
+  #startBtn {
+    padding: 14px 40px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    background: #000;
+    color: var(--green);
+    border: 2px solid var(--green);
+    cursor: pointer;       /* shows a hand cursor when you hover */
+    letter-spacing: 2px;
+    box-shadow: 0 0 12px #44aa44;
+    transition: all 0.15s; /* smooth change when hovering */
+    animation: pulse 2s infinite; /* glow pulses like a heartbeat */
+  }
+
+  /* "pulse" makes the button glow brighter and dimmer like a heartbeat! */
+  @keyframes pulse {
+    0%,100%{box-shadow:0 0 12px #44aa44}              /* normal glow */
+    50%{box-shadow:0 0 24px #88ff88,0 0 40px #44aa44} /* bigger glow at halfway */
+  }
+
+  /* When you hover: swap the colors (black bg becomes green bg) */
+  #startBtn:hover { background: var(--green); color: #000; box-shadow: 0 0 30px #88ff88; }
+
+  #keyHints { color: #336633; font-size: 12px; }
+
+  /* 
+    OVERLAYS - screens that appear ON TOP of everything.
+    They start hidden (display:none) and JavaScript shows them when needed.
+  */
+  .overlay {
+    position: fixed; inset: 0;
+    display: none; flex-direction: column; /* hidden by default! */
+    justify-content: center; align-items: center;
+    z-index: 3000; text-align: center; gap: 16px; /* z-index 3000 = front of EVERYTHING */
+    backdrop-filter: blur(6px); /* blurs the game behind it */
+  }
+
+  /* The red GAME OVER screen */
+  #gameOverScreen { background: rgba(0,0,0,0.92); color: var(--red); }
+  #gameOverScreen h1 { font-family: 'Press Start 2P', monospace; font-size: 28px; text-shadow: 0 0 20px var(--red); }
+  #gameOverScreen .sub { color: #884444; font-size: 13px; }
+  .overlay button {
+    padding: 12px 32px;
+    font-family: 'Press Start 2P', monospace; font-size: 13px;
+    background: #000; cursor: pointer; border: 2px solid;
+    letter-spacing: 1px; transition: all 0.15s;
+  }
+  #gameOverScreen button { color: var(--red); border-color: var(--red); }
+  #gameOverScreen button:hover { background: var(--red); color: #000; }
+
+  /* 
+    TOAST NOTIFICATION - the floating pop-up like "LEVEL UP!" or "RAGE ACTIVATED!"
+    Sits at the top-center and fades in/out using opacity.
+    pointer-events:none means you can't accidentally click on it!
+  */
+  #levelUpToast {
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    font-family: 'Press Start 2P', monospace; font-size: 14px;
+    color: var(--gold); text-shadow: 0 0 12px var(--gold);
+    pointer-events: none; /* clicks pass right through it */
+    z-index: 1000;
+    opacity: 0; transition: opacity 0.3s; /* starts invisible, fades in smoothly */
+  }
+
+  /* 
+    SCREEN SHAKE - when you get hit hard, the whole screen shakes!
+    This animation moves things left-right and up-down rapidly.
+    JavaScript adds the "shaking" class to trigger this, then removes it.
+  */
+  @keyframes shake {
+    0%,100%{transform:translate(0,0)}    /* centered */
+    20%{transform:translate(-4px,3px)}   /* left and slightly down */
+    40%{transform:translate(4px,-3px)}   /* right and slightly up */
+    60%{transform:translate(-3px,2px)}   /* left again */
+    80%{transform:translate(3px,-2px)}   /* right again */
+  }
+  .shaking { animation: shake 0.25s; } /* the shake lasts a quarter of a second */
+
+  /* 
+    BOSS ALERT - the big scary "BOSS INCOMING" text in the middle of the screen.
+    Starts invisible (opacity:0) and JavaScript fades it in when a boss is near!
+  */
+  #bossAlert {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    font-family: 'Press Start 2P', monospace; font-size: 22px;
+    color: var(--red); text-shadow: 0 0 20px var(--red);
+    pointer-events: none;
+    z-index: 1500;
+    opacity: 0; transition: opacity 0.4s; /* fades in and out */
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- 
+  AUDIO ELEMENTS
+  ===============
+  These are invisible sound players sitting in the background.
+  preload="auto" = download the sound file right away so it plays instantly.
+  loop = play it over and over forever (used for background music).
+-->
+
+<!-- Background music that loops forever during gameplay -->
+<audio id="bgMusic" src="castles.wav" preload="auto" loop></audio>
+<!-- Death sound - plays just ONCE when the player dies -->
+<audio id="deadSound" src="dead.wav" preload="auto"></audio>
+
+<!-- 
+  TITLE SCREEN
+  The first thing you see. Covers the whole window (z-index: 2000).
+  JavaScript hides this when you click START.
+-->
+<div id="titleScreen">
+  <!-- The robot boss logo image with a green glowing filter -->
+  <img src="bossfavicon.png" style="width:80px; height:80px; image-rendering:pixelated; filter: drop-shadow(0 0 12px #88ff88) drop-shadow(0 0 24px #44aa44); animation: flicker 4s infinite;" alt="Boss">
+  <!-- The huge ASCII art logo made entirely of text characters! -->
+  <pre id="ascii">
+ _______   ____  ____   __    ___       ________    _______   _______       _______    _______     ______    ________
+|   _  "\ ("  _||_ " | |" \  |"  |     |"      "\  /"     "| /"      \     |   _  "\  /"      \   /    " \  /"       )
+(. |_)  :)|   (  ) : | ||  | ||  |     (.  ___  :)(: ______)|:        |    (. |_)  :)|:        | // ____  \(:   \___/
+|:     \/ (:  |  | . ) |:  | |:  |     |: \   ) || \/    |  |_____/   )    |:     \/ |_____/   )/  /    ) :)\___  \
+(|  _  \\  \\ \__/ //  |.  |  \  |___  (| (___\ || // ___)_  //      /     (|  _  \\  //      /(: (____/ //  __/  \\
+|: |_)  :) /\\ __ //\  /\  |\( \_|:  \ |:       :)(:      "||:  __   \     |: |_)  :)|:  __   \ \        /  /" \   :)
+(_______/ (__________)(__\_|_)\_______)(________/  \_______)|__|  \___)    (_______/ |__|  \___) \"_____/  (_______/
+  </pre>
+  <div id="titleText">BOSS EDITION</div>
+  <div id="subtitleText">An infinite world awaits. Survive enemy hordes, build your fortress, and defeat the Boss every 3 minutes.<br></div>
+  <button id="startBtn">▶ START GAME</button>
+  <div id="keyHints">Arrows: Move &nbsp;|&nbsp; T: Iron Wall &nbsp;|&nbsp; Space: ⚡ Lightning &nbsp;|&nbsp; U: Mushroom &nbsp;|&nbsp; G: 🚪 Door &nbsp;|&nbsp; M: Mute</div>
+</div>
+
+<!-- Game over screen - hidden until the player dies -->
+<div id="gameOverScreen" class="overlay">
+  <h1>☠ GAME OVER</h1>
+  <div class="sub" id="finalScore"></div> <!-- JavaScript fills in your score here -->
+  <button onclick="location.reload()">▶ TRY AGAIN</button> <!-- reload = restart the whole page! -->
+</div>
+
+<!-- Big red warning that flashes in the center when a boss is about to arrive -->
+<div id="bossAlert">⚠ BOSS INCOMING ⚠</div>
+
+<!-- Pop-up toast message (like "LEVEL UP!") shown briefly then fades away -->
+<div id="levelUpToast"></div>
+
+<!-- 
+  HUD - HEADS UP DISPLAY
+  The info bar along the TOP of the screen.
+  Shows: HP bar, Level, Score, Rage bar, Purple bar, Boss timer, Day/night bar
+-->
+<div id="hud">
+  <!-- HP Section: a bar that shrinks as you take damage -->
+  <div class="section">
+    <span class="hud-label">HP</span>
+    <!-- hpFill width is set by JavaScript (0% = dead, 100% = full health) -->
+    <div id="hpBar"><div id="hpFill" style="width:100%"></div></div>
+    <span id="hpVal">100</span>
+  </div>
+  <span class="sep">|</span>
+
+  <!-- Level Section -->
+  <div class="section">
+    <span class="hud-label">LVL</span>
+    <span id="levelVal">1</span>
+  </div>
+  <span class="sep">|</span>
+
+  <!-- Score Section -->
+  <div class="section">
+    <span class="hud-label">SCORE</span>
+    <span id="scoreVal">0</span>
+  </div>
+  <span class="sep">|</span>
+
+  <!-- Rage bar - only shows up when you have a rage power-up! -->
+  <div class="section" id="rageSection" style="display:none;">
+    <img src="rage_icon.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <div id="rageBar" style="width:80px;height:12px;background:#111;border:1px solid #ff4400;border-radius:2px;overflow:hidden;">
+      <div id="rageFill" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2200,#ff8800);border-radius:2px;transition:width 0.1s;"></div>
+    </div>
+    <span id="rageLabel" style="font-size:11px;color:#ff6600;">READY</span>
+  </div>
+  <span class="sep">|</span>
+
+  <!-- Purple electric bar - only shows when you have that power-up -->
+  <div class="section" id="purpleSection" style="display:none;">
+    <img src="purple_electric.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <div id="purpleBar" style="width:80px;height:12px;background:#111;border:1px solid #aa44ff;border-radius:2px;overflow:hidden;">
+      <div id="purpleFill" style="height:100%;width:100%;background:linear-gradient(90deg,#7700ff,#cc44ff);border-radius:2px;transition:width 0.1s;"></div>
+    </div>
+    <span id="purpleLabel" style="font-size:11px;color:#cc44ff;">READY</span>
+  </div>
+  <span class="sep" id="purpleSep" style="display:none;">|</span>
+  <div class="section" id="purpleSection" style="display:none;">
+    <img src="purple_electric.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <span id="purpleLabel" style="font-size:11px;color:#cc44ff;">READY</span>
+  </div>
+  <span class="sep">|</span>
+
+  <!-- Boss countdown timer (counts down from 3:00) -->
+  <div class="section">
+    <span class="hud-label">BOSS</span>
+    <span id="bossTimerVal">3:00</span>
+  </div>
+
+  <!-- Day/night cycle indicator - shows sun or moon position on a timeline -->
+  <span class="sep" style="margin-left:auto">|</span>
+  <div id="dayCycleWrap" style="display:flex;align-items:center;gap:8px;">
+    <span class="hud-label" id="dayPhaseLbl" style="min-width:44px;text-align:right;font-size:11px;">DAY</span>
+    <!-- A small separate canvas just for the day/night timeline bar -->
+    <canvas id="dayBar" width="160" height="28" style="display:block;"></canvas>
+  </div>
+  <span class="sep">|</span>
+
+  <!-- Pause button in the top right -->
+  <button id="pauseBtn" onclick="togglePause(); this.blur();" tabindex="-1" style="
+    font-family:'Press Start 2P',monospace; font-size:11px;
+    background:#000; color:#88ff88; border:1px solid #1a4a1a;
+    padding:4px 12px; cursor:pointer; letter-spacing:1px;
+    transition: all 0.1s;
+  ">⏸ PAUSE</button>
+</div>
+
+<!-- The main game canvas - this is where ALL the game action is drawn! -->
+<canvas id="game"></canvas>
+
+<!-- 
+  Rage GIF overlay - an animated image positioned directly on top of the player.
+  JavaScript moves and shows/hides it using style.left, style.top, style.display.
+-->
+<img id="rageGifEl" src="rage.gif" style="
+  display:none; position:fixed; pointer-events:none; z-index:800;
+  image-rendering:pixelated;
+">
+
+<!-- Purple electric GIF overlay - same idea as the rage GIF above -->
+<img id="purpleGifEl" src="purple_electric.gif" style="
+  display:none; position:fixed; pointer-events:none; z-index:800;
+  image-rendering:pixelated;
+">
+
+<!-- The keyboard controls cheat sheet along the bottom -->
+<div id="controls">
+  <span>B=🪨</span><span>Y=🌳</span><span>R=🌵</span><span>U=🍄</span>
+  <span>T=⬛Iron</span><span>G=🚪Door</span><span>H=Lava</span>
+  <span>Space=⚡/😡Rage</span><span>Arrows=Move</span><span>M=Mute</span>
+</div>
+
+<script>
+// =============================================================================
+// THE GAME BRAIN - JavaScript
+// =============================================================================
+//
+// JavaScript is the "brain" of the game. It runs inside your browser and
+// controls EVERYTHING: moving, shooting, enemies, drawing - all of it!
+//
+// A few important ideas before we start:
+//
+//   VARIABLES  = boxes that store information.     Example: let score = 0;
+//   FUNCTIONS  = named recipes for doing things.   Example: function jump() { ... }
+//   OBJECTS    = like a character card with stats. Example: player = { x:0, hp:100 }
+//   ARRAYS     = lists of things.                  Example: enemies = [ghost, zombie]
+//   THE LOOP   = a function called 60 times/second that updates and draws everything.
+//                Each run is a "frame" - like one picture in a cartoon flipbook!
+//
+// =============================================================================
+
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+// Constants are values that NEVER change. Written in ALL_CAPS as a reminder!
+
+const TILE = 36;                 // each grid square is 36 pixels wide and tall
+const BOSS_INTERVAL = 180 * 60; // frames between bosses: 180 seconds x 60fps = 10800 frames
+const DAY_CYCLE = 60 * 60;      // frames for a full day+night: 60 seconds x 60fps = 3600 frames
+
+
+// ─── STATE VARIABLES ──────────────────────────────────────────────────────────
+// These are the "memory" of the game. They change as you play!
+
+// Grab the canvas element and its "2d drawing context".
+// The canvas is a blank drawing board. ctx is the pencil we use to draw on it!
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let gameStarted = false; // has the player clicked START? false = still on title screen
+let paused = false;      // is the game paused? false = currently running
+let frameCount = 0;      // how many frames have run since the game started (counts forever!)
+
+let score = 0;           // your score - goes up when you kill enemies
+let level = 1;           // current level (starts at 1, max is 15)
+let xp = 0;              // experience points - fill this up to level up!
+const XP_PER_LEVEL = 10; // XP needed per level (multiplied by your current level)
+
+// dayTime tracks the time of day as a number from 0.0 to 1.0 (like a clock going 0 to 100%)
+// 0.0 = noon, 0.4 = dusk, 0.5 = midnight, 0.9 = dawn, 1.0 = noon again
+let dayTime = 0;
+
+// camera: the "window" looking at the world.
+// x,y = the top-left corner of what we're currently looking at, in pixels
+let camera = { x: 0, y: 0 };
+
+// player: the object holding everything about YOUR character
+let player = {
+  x: 0,           // position on the tile grid (in tiles, not pixels!)
+  y: 0,           // tile 0,0 is where you start
+  hp: 100,        // current health points
+  maxHp: 100,     // maximum health (grows when you level up)
+  moveDelay: 0,   // countdown timer before taking another step (prevents too-fast movement)
+  moveSpeed: 10,  // how many frames to wait before repeating a held movement key
+  moveHeld: false, // is a movement key being held down right now?
+  invincible: 0   // "invincibility frames" after being hit (so you don't die instantly!)
+};
+
+// keys: stores which keyboard keys are currently pressed
+// When you hold the right arrow: keys["arrowright"] = true
+// When you let go:               keys["arrowright"] = false
+const keys = {};
+
+// map: stores every tile in the infinite world
+// It's an object where the "address" is "x,y" and the value is what's there
+// Example: map["3,-2"] = "🌳"   means there's a tree at tile (3, -2)
+// 0 = empty ground, "🌳" = tree, "iron" = wall, "lava" = lava, etc.
+let map = {};
+
+// These are lists (arrays) of all active game objects
+let enemies = [];      // all the ghosts, zombies, bats, and skulls
+let spawnPoints = [];  // tile positions where enemies can appear (lava spots!)
+let projectiles = [];  // flying lightning bolts
+let bosses = [];       // the big scary boss enemies
+let particles = [];    // sparkle and explosion effects (just for show, not gameplay)
+
+let bossTimer = BOSS_INTERVAL; // countdown to the next boss - starts full
+let shakeTimer = 0;            // when > 0, the screen shakes! counts down to 0.
+let actionCooldown = {};       // holds cooldown timers for actions (prevents spamming)
+
+// Camera smoothing: instead of snapping to the player, the camera gently follows
+let cameraTarget = { x: 0, y: 0 }; // where the camera WANTS to be (target position)
+const DEAD_ZONE = TILE * 4;          // player can walk 4 tiles from screen center before camera moves
+const CAM_EASE = 0.08;               // how fast camera catches up: 8% closer per frame (feels smooth!)
+
+// Preload images so they're ready instantly when we need to draw them
+const bossImg = new Image(); bossImg.src = 'boss.png';
+const rageIconImg = new Image(); rageIconImg.src = 'rage_icon.png';
+
+
+// ─── RAGE POWER-UP ────────────────────────────────────────────────────────────
+// Rage pickups appear on the ground near you. Pick one up, press SPACE to activate!
+// While raging: you DESTROY everything in a 5x5 area around you for 10 seconds!
+
+const RAGE_DURATION = 10 * 60;               // 10 seconds x 60fps = 600 frames
+const RAGE_PICKUP_SPAWN_INTERVAL = 60 * 60;  // a new pickup spawns every 60 seconds
+
+let ragePickups = [];                         // list of rage pickups currently on the ground
+let rageTimer = 0;                            // counts down while rage is ACTIVE (0 = not raging)
+let ragePickupSpawn = RAGE_PICKUP_SPAWN_INTERVAL; // countdown to the next pickup spawn
+let rageStored = false;                       // true = you've picked one up and can press SPACE!
+
+
+// ─── PURPLE ELECTRIC POWER-UP ─────────────────────────────────────────────────
+// Purple electric pickups appear on the ground. Pick one up, press SPACE!
+// While active: a purple lightning storm ZAPS ALL enemies for 3 seconds!
+
+const PURPLE_ELEC_DURATION = 3 * 60;              // 3 seconds x 60fps = 180 frames
+const PURPLE_ELEC_SPAWN_INTERVAL = 75 * 60;       // spawns every 75 seconds
+
+let purplePickups = [];                            // list of purple pickups on the ground
+let purpleTimer = 0;                               // counts down while purple storm is ACTIVE
+let purpleStored = false;                          // true = you have one ready to use with SPACE
+let purplePickupSpawn = PURPLE_ELEC_SPAWN_INTERVAL;
+
+const purpleIconImg = new Image(); purpleIconImg.src = 'purple_electric.png';
+
+
+// ─── WRENCH HEALING PICKUP ────────────────────────────────────────────────────
+// Wrenches appear on the ground near you. Walk over one to heal 25% of your max HP!
+
+const WRENCH_SPAWN_INTERVAL = 75 * 60;  // spawns every 75 seconds
+
+let wrenchPickups = [];                  // list of wrenches currently on the ground
+let wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL; // countdown to next spawn
+
+const wrenchIconImg = new Image(); wrenchIconImg.src = 'wrench.png';
+
+
+// ─── DEATH SOUND FLAG ─────────────────────────────────────────────────────────
+// This prevents the death sound from playing every single frame after you die.
+// Once the sound plays, _deadPlayed = true and it won't play again.
+let _deadPlayed = false;
+
+
+// ─── RESIZE HANDLER ───────────────────────────────────────────────────────────
+// When the browser window changes size, make the canvas match it exactly.
+// This keeps the game filling the whole screen whether it's big or small!
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize); // run resize whenever window size changes
+resize(); // also run it RIGHT NOW at startup so the canvas starts at the right size!
+
+
+// ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
+
+// Turn an (x, y) tile position into a string "address" for looking up tiles in the map.
+// Example: k(3, -2) returns the string "3,-2"
+// We use this string as a key in the map object to find what tile is at that position.
+const k = (x, y) => `${x},${y}`;
+
+// Save a tile type at position (x, y) in the map
+function setTile(x, y, v) { map[k(x, y)] = v; }
+
+// Look at what's stored at (x, y) WITHOUT auto-generating new tiles if missing
+function getTileRaw(x, y) { return map[k(x, y)]; }
+
+// Decide what BIOME (region type) a tile belongs to based on its position.
+// We use sine and cosine math waves to create a smooth, organic-looking pattern.
+// Different biomes grow different things: forests get trees, deserts get cacti, etc.
+function biome(x, y) {
+  // Math.sin and Math.cos create smooth waves. Adding two waves = interesting bumpy terrain!
+  const v = Math.sin(x * 0.01) + Math.cos(y * 0.01); // result is a number from -2 to +2
+  if (v > 1)    return "forest";   // high value = forest
+  if (v > 0.3)  return "plains";   // medium-high = open plains
+  if (v > -0.3) return "pine";     // medium-low = pine forest
+  if (v > -1)   return "mushroom"; // low = mushroom patch
+  return "desert";                  // very low = cactus desert
+}
+
+// Get the tile at position (x, y).
+// If this tile has never been seen before, GENERATE it randomly first!
+// This is how the world is "infinite" - we invent new tiles as you explore.
+function getTile(x, y) {
+  const key = k(x, y);
+
+  // If we already know what's here, just return it straight away
+  if (map.hasOwnProperty(key)) return map[key];
+
+  // --- Brand new tile! We need to decide what goes here ---
+  const b = biome(x, y); // figure out which biome this position is in
+  let tile = 0;           // 0 = empty ground (the default - most tiles are empty!)
+
+  // Small 0.2% chance of lava! Lava tiles become enemy spawn points.
+  if (Math.random() < 0.002) {
+    tile = "lava";
+    spawnPoints.push({ x, y }); // remember this position - enemies will spawn here!
+  } else {
+    // Otherwise, maybe place a plant based on the biome type
+    if      (b === "forest"   && Math.random() < 0.08) tile = "🌳"; // 8% tree chance in forests
+    else if (b === "pine"     && Math.random() < 0.08) tile = "🌲"; // 8% pine tree in pine zones
+    else if (b === "desert"   && Math.random() < 0.06) tile = "🌵"; // 6% cactus in desert
+    else if (b === "mushroom" && Math.random() < 0.07) tile = "🍄"; // 7% mushroom in mushroom zones
+    else if (Math.random() < 0.04) tile = "🪨"; // 4% random boulder anywhere
+  }
+
+  map[key] = tile; // save it so we don't re-randomize the same spot next time!
+  return tile;
+}
+
+
+// ─── PARTICLE SYSTEM ──────────────────────────────────────────────────────────
+// Particles are tiny colored dots that fly out on explosions, deaths, and pickups.
+// They're purely decorative - they don't affect the game at all, just look cool!
+
+// Create a burst of sparkle particles at a tile position.
+// x, y = tile coords    color = hex color like "#ff4400"
+// count = number of dots    speed = how fast they zoom outward
+function spawnParticles(x, y, color, count = 8, speed = 1.5) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2; // random direction (Math.PI*2 = full 360 degrees in radians)
+    const v = (Math.random() + 0.5) * speed;   // random speed (between 50% and 150% of base speed)
+    particles.push({
+      x: x * TILE + TILE / 2, // convert tile position to pixel position (center of the tile)
+      y: y * TILE + TILE / 2,
+      vx: Math.cos(angle) * v, // Math.cos gives the X component of the direction
+      vy: Math.sin(angle) * v, // Math.sin gives the Y component of the direction
+      life: 30 + Math.random() * 20, // random lifespan: 30 to 50 frames
+      maxLife: 50,                   // used to calculate fade-out (life/maxLife = alpha 0 to 1)
+      color,
+      size: 3 + Math.random() * 3    // random size between 3 and 6 pixels wide
+    });
+  }
+}
+
+// Create a floating text particle (like "+2XP" or "-15") that drifts upward then fades
+function spawnTextParticle(x, y, text, color = "#ffd700") {
+  particles.push({
+    text,                        // the string to draw
+    x: x * TILE + TILE / 2,     // start centered on the tile
+    y: y * TILE,
+    vy: -1,                      // drift upward 1 pixel per frame (negative Y = up on screen!)
+    life: 50, maxLife: 50,       // lasts 50 frames
+    color,
+    isText: true                 // flag so the drawing code knows this is text, not a dot
+  });
+}
+
+// Update ALL particles every frame: move them, age them, and remove dead ones
+function updateParticles() {
+  // We loop BACKWARDS through the array so we can safely delete items while looping!
+  // (If you loop forwards and delete, you skip the next item. Backwards is safer.)
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+
+    if (!p.isText) {
+      // Normal dot particle: move by its velocity
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08; // GRAVITY! Each frame pulls the dot down a tiny bit, making an arc
+    } else {
+      // Text particle: just float straight upward
+      p.y += p.vy;
+    }
+
+    p.life--; // one frame older - closer to death!
+    if (p.life <= 0) particles.splice(i, 1); // remove it when it runs out of life
+    // splice(i, 1) means "remove 1 item at position i"
+  }
+}
+
+// Draw ALL particles onto the canvas this frame
+function drawParticles() {
+  for (const p of particles) {
+    // As the particle ages, fade it out. alpha 1.0 = solid, 0.0 = invisible
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha; // this affects ALL drawing until we reset it!
+
+    if (p.isText) {
+      // Draw floating score text
+      ctx.fillStyle = p.color;
+      ctx.font = "bold 14px 'Share Tech Mono'";
+      ctx.textAlign = "center";
+      // Subtract camera to convert world coordinates to screen coordinates!
+      ctx.fillText(p.text, p.x - camera.x, p.y - camera.y);
+    } else {
+      // Draw a small filled circle
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x - camera.x, p.y - camera.y, p.size * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1; // ALWAYS reset to fully opaque after drawing particles!
+  // Forgetting this would make everything else transparent too!
+}
+
+
+// ─── STRUCTURE SPAWNER ────────────────────────────────────────────────────────
+// Before the game starts, we place some interesting structures in the world
+// so it looks like someone actually built things there before you arrived!
+
+function spawnStructure(type) {
+  // Pick a random position between -60 and +60 tiles away from the center
+  let sx = Math.floor(Math.random() * 120) - 60;
+  let sy = Math.floor(Math.random() * 120) - 60;
+
+  // Don't place structures in the player's starting area (within 8 tiles of 0,0)
+  if (Math.abs(sx) < 8 && Math.abs(sy) < 8) return;
+
+  if (type === "room") {
+    // Build a hollow rectangle of iron walls with a doorway opening on one side
+    const size = 5 + Math.floor(Math.random() * 3); // random size: 5, 6, or 7 tiles
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        // Only place walls on the EDGES (x=0, x=last, y=0, y=last) - hollow in the middle!
+        if (x === 0 || x === size - 1 || y === 0 || y === size - 1) {
+          // Leave a gap in the top-center as an entrance doorway
+          if (!(x === Math.floor(size / 2) && y === 0)) {
+            setTile(sx + x, sy + y, "iron");
+          }
+        }
+      }
+    }
+  } else if (type === "cross") {
+    // Build a plus/cross shape made of boulders
+    for (let i = -3; i <= 3; i++) {
+      setTile(sx + i, sy, "🪨"); // horizontal bar
+      setTile(sx, sy + i, "🪨"); // vertical bar
+    }
+  }
+}
+
+
+// ─── INPUT HANDLERS ───────────────────────────────────────────────────────────
+// Listen for keyboard events and keep the keys{} object up to date.
+// keydown fires when a key is pressed down, keyup fires when it's released.
+
+document.addEventListener("keydown", e => {
+  // Mark this key as currently being held down
+  keys[e.key.toLowerCase()] = true;
+
+  // Special case: M key toggles mute for ALL sounds at the same time
+  if (e.key.toLowerCase() === "m") {
+    const music = document.getElementById("bgMusic");
+    const deadSound = document.getElementById("deadSound");
+    const muted = !music.muted; // flip: if muted make it unmuted, if unmuted make it muted
+    music.muted = muted;
+    deadSound.muted = muted;
+  }
+});
+
+document.addEventListener("keyup", e => {
+  // Mark this key as no longer being held
+  keys[e.key.toLowerCase()] = false;
+
+  // When any arrow key is released, reset movement state
+  // so the next press starts fresh (no leftover momentum)
+  if (["arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase())) {
+    player.moveHeld = false;
+    player.moveDelay = 0;
+  }
+});
+
+
+// ─── PLAYER MOVEMENT ──────────────────────────────────────────────────────────
+// Check which arrow keys are held and move the player one tile at a time.
+// Tapping moves one tile. Holding the key moves repeatedly with a small delay.
+
+function handleMovement() {
+  if (player.hp <= 0) return; // dead players can't move!
+
+  // Check which direction is being pressed
+  let dx = 0, dy = 0;
+  if (keys["arrowleft"])  dx = -1; // left  = go left (x decreases)
+  if (keys["arrowright"]) dx =  1; // right = go right (x increases)
+  if (keys["arrowup"])    dy = -1; // up    = go up (y DECREASES because screen Y goes down!)
+  if (keys["arrowdown"])  dy =  1; // down  = go down (y increases)
+
+  // No key pressed - reset the hold state and exit
+  if (dx === 0 && dy === 0) { player.moveHeld = false; return; }
+
+  // Check if the destination tile is solid (we can't walk into walls!)
+  const nx = player.x + dx, ny = player.y + dy;
+  const nt = getTile(nx, ny);
+  if (nt === "iron" || nt === "🪨") return; // blocked! don't move.
+
+  if (!player.moveHeld) {
+    // FIRST PRESS: move immediately, then start the hold delay timer
+    player.x += dx;
+    player.y += dy;
+    player.moveHeld = true;
+    player.moveDelay = player.moveSpeed; // wait 10 frames before repeating
+
+    // Ouch! Did we step on lava?
+    if (getTile(player.x, player.y) === "lava" && player.invincible <= 0) {
+      player.hp -= 10;
+      player.invincible = 30; // 30 frames where you can't get hurt again (so you don't die instantly)
+      shakeTimer = 15;        // shake the screen!
+    }
+    return;
+  }
+
+  // KEY IS HELD: count down the delay, then move again
+  player.moveDelay--;
+  if (player.moveDelay <= 0) {
+    player.x += dx;
+    player.y += dy;
+    player.moveDelay = 2; // very short delay while held down (fast movement!)
+
+    // Check lava again at new position
+    if (getTile(player.x, player.y) === "lava" && player.invincible <= 0) {
+      player.hp -= 10;
+      player.invincible = 30;
+      shakeTimer = 15;
+    }
+  }
+}
+
+
+// ─── PLAYER ACTIONS ───────────────────────────────────────────────────────────
+// Check action keys and do things like placing tiles, firing lightning, or using powers.
+
+function handleActions() {
+  if (player.hp <= 0) return; // dead players can't do anything!
+
+  const x = player.x, y = player.y; // shorthand so we don't type player.x everywhere
+
+  // BUILDING: press a key to place a tile RIGHT WHERE YOU'RE STANDING
+  if (keys["b"]) setTile(x, y, "🪨");   // place a boulder
+  if (keys["y"]) setTile(x, y, "🌳");   // plant a tree
+  if (keys["r"]) setTile(x, y, "🌵");   // plant a cactus
+  if (keys["u"]) setTile(x, y, "🍄");   // place a mushroom (poisons the boss if it walks on it!)
+  if (keys["t"]) setTile(x, y, "iron"); // build an iron wall (enemies and boss can't pass!)
+  if (keys["g"]) setTile(x, y, "door"); // place a door (only the boss can't pass through doors)
+  if (keys["h"]) {
+    setTile(x, y, "lava");              // place lava (dangerous to walk on!)
+    spawnPoints.push({ x, y });         // also register it as an enemy spawn point
+  }
+
+  // SECRET EASTER EGG: Press W to summon a boss near you!
+  // This is hidden from the controls bar - it's a secret cheat!
+  if (keys["w"] && !actionCooldown["bossSpawn"]) {
+    // Choose a random direction (angle in radians) and distance (12-17 tiles away)
+    const angle = Math.random() * Math.PI * 2; // random angle: Math.PI*2 = full circle
+    const dist = 12 + Math.floor(Math.random() * 6); // between 12 and 17 tiles away
+
+    // Convert the angle and distance to X,Y tile offsets
+    // (Math.cos and Math.sin do the triangle math for us!)
+    const bX = player.x + Math.round(Math.cos(angle) * dist);
+    const bY = player.y + Math.round(Math.sin(angle) * dist);
+
+    // Create the boss! HP scales with your current level (gets harder the more you level up)
+    const bHp = 40 + level * 5;
+    bosses.push({ x: bX, y: bY, hp: bHp, maxHp: bHp, timer: 0 });
+
+    // Add flashy effects so you know it worked!
+    spawnParticles(bX, bY, "#ff0000", 25, 3);         // red explosion where boss spawns
+    spawnParticles(player.x, player.y, "#ff4400", 10, 2); // orange burst at your feet
+    showBossAlert();                                   // flash the "BOSS INCOMING" warning
+    showToast("😈 BOSS SUMMONED!");                    // pop-up message
+    shakeTimer = 20;                                   // shake the screen for drama!
+
+    actionCooldown["bossSpawn"] = 120; // 2-second cooldown so you can't spam it (120 frames)
+    keys["w"] = false; // clear the key press so holding W doesn't keep firing
+  }
+
+  // SPACEBAR: fire lightning OR activate a stored power-up!
+  // "spaceUsed" cooldown prevents accidentally firing multiple times
+  if (keys[" "] && !actionCooldown["spaceUsed"]) {
+
+    if (purpleStored && purpleTimer <= 0 && rageTimer <= 0) {
+      // ACTIVATE PURPLE STORM (purple takes priority if you have both!)
+      purpleTimer = PURPLE_ELEC_DURATION; // start the storm countdown
+      purpleStored = false;               // use up the pickup
+      spawnParticles(player.x, player.y, "#cc44ff", 20, 3);
+      showToast("⚡ PURPLE STORM!");
+
+    } else if (rageStored && rageTimer <= 0 && purpleTimer <= 0) {
+      // ACTIVATE RAGE
+      rageTimer = RAGE_DURATION; // start the rage countdown
+      rageStored = false;        // use up the pickup
+      spawnParticles(player.x, player.y, "#ff4400", 20, 3);
+      showToast("😡 RAGE ACTIVATED!");
+
+    } else if (rageTimer <= 0 && purpleTimer <= 0) {
+      // FIRE NORMAL LIGHTNING: 8 bolts shoot out in all 8 directions!
+      // [dx, dy] pairs for: up, down, left, right, and 4 diagonals
+      const dirs = [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
+      for (const [dx, dy] of dirs) {
+        projectiles.push({
+          x: player.x, y: player.y, // start at your position
+          dx, dy,                    // direction to travel each frame
+          dist: 0,                   // distance traveled so far (used to expire it at 30 tiles)
+          type: "lightning"
+        });
+      }
+      spawnParticles(player.x, player.y, "#88ffff", 12, 2);
+      actionCooldown["lightning"] = 20; // short cooldown before next lightning shot
+    }
+
+    actionCooldown["spaceUsed"] = 15; // brief overall cooldown to prevent spam
+    keys[" "] = false; // clear key
+  }
+}
+
+
+// ─── ENEMY SYSTEM ─────────────────────────────────────────────────────────────
+// Enemies spawn from lava tiles and slowly walk toward the player.
+// They move on a timer so they're not too fast - they move every N frames, not every frame!
+
+// The 4 enemy types. Stats:
+// speed = frames between moves (BIGGER NUMBER = SLOWER! a zombie at 40 moves slower than a bat at 20)
+// dmg = damage dealt when touching player
+// hp = lightning hits needed to kill it
+// xp = experience reward when killed
+// night = true means it only spawns at night
+const ENEMY_TYPES = [
+  { emoji: "👻", speed: 30, dmg: 3,  hp: 1, xp: 1, night: false }, // ghost: everyday enemy, weak
+  { emoji: "🧟", speed: 40, dmg: 6,  hp: 2, xp: 2, night: false }, // zombie: slow but hits harder
+  { emoji: "🦇", speed: 20, dmg: 4,  hp: 1, xp: 2, night: true  }, // bat: fast! only comes at night
+  { emoji: "💀", speed: 25, dmg: 10, hp: 3, xp: 5, night: true  }, // skull: very tough, night only
+];
+
+function updateEnemies() {
+  const isNight = dayTime > 0.45 && dayTime < 0.95; // is it currently night time?
+
+  // More enemies spawn at night - it gets scarier in the dark!
+  const spawnRate = isNight ? 0.06 : 0.025; // 6% per frame at night, 2.5% during day
+  const maxEnemies = isNight ? 35 + level * 2 : 20 + level; // night = more enemies allowed
+
+  // Roll the dice: should we spawn an enemy this frame?
+  if (enemies.length < maxEnemies && Math.random() < spawnRate && spawnPoints.length > 0) {
+    // Pick a random lava tile to spawn from
+    const s = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+    // Night = all enemy types. Day = only non-night enemies (no bats or skulls!)
+    const pool = isNight ? ENEMY_TYPES : ENEMY_TYPES.filter(e => !e.night);
+    const type = pool[Math.floor(Math.random() * pool.length)]; // random pick from the allowed types
+
+    enemies.push({
+      x: s.x, y: s.y,       // start at the spawn point
+      ...type,               // copy all stats from the type (emoji, speed, dmg, hp, xp, night)
+      timer: 0,              // movement timer starts at 0 so it moves right away
+      curHp: type.hp         // separate current HP for tracking damage
+    });
+  }
+
+  // Update each enemy
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (player.hp <= 0) continue; // don't update enemies if the player is already dead
+
+    e.timer--; // count down the movement timer
+    if (e.timer <= 0) {
+      e.timer = e.speed; // reset the timer for next move
+
+      // Figure out which direction leads toward the player
+      const dx = Math.sign(player.x - e.x); // -1 (left), 0 (same column), or +1 (right)
+      const dy = Math.sign(player.y - e.y); // -1 (up), 0 (same row), or +1 (down)
+
+      // Try to move. First try going diagonally, then just horizontally, then just vertically.
+      // This "wall sliding" trick means enemies navigate around obstacles automatically!
+      let moved = false;
+      for (const [ndx, ndy] of [[dx, dy],[dx, 0],[0, dy]]) {
+        const nx = e.x + ndx, ny = e.y + ndy;
+        const tile = getTile(nx, ny);
+        if (tile === "iron" || tile === "door") continue; // blocked! try next option
+        if (tile !== 0 && tile !== "lava") setTile(nx, ny, 0); // enemy smashes plants as it walks!
+        e.x = nx; e.y = ny;
+        moved = true;
+        break; // we moved! stop trying other directions
+      }
+
+      // Did the enemy end up on the same tile as the player? DEAL DAMAGE!
+      if (e.x === player.x && e.y === player.y && player.invincible <= 0) {
+        player.hp -= e.dmg;
+        player.invincible = 20; // brief invincibility so you don't lose all HP in one second
+        shakeTimer = 10;
+      }
+    }
+  }
+}
+
+
+// ─── PURPLE ELECTRIC SYSTEM ───────────────────────────────────────────────────
+// Handles spawning purple pickups on the ground, collecting them, and the storm effect.
+
+function updatePurple() {
+  // Count down to the next pickup spawn
+  purplePickupSpawn--;
+  if (purplePickupSpawn <= 0) {
+    purplePickupSpawn = PURPLE_ELEC_SPAWN_INTERVAL; // reset countdown
+
+    // Spawn 1 pickup at a random position near the player (8-17 tiles away)
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    // Only place it on an empty tile (don't put it inside a wall!)
+    if (getTile(px, py) === 0) purplePickups.push({ x: px, y: py, ttl: 20 * 60 }); // lives 20 seconds
+  }
+
+  // Check each pickup: did it expire? Did the player walk over it?
+  for (let i = purplePickups.length - 1; i >= 0; i--) {
+    const p = purplePickups[i];
+    p.ttl--; // count down time-to-live
+    if (p.ttl <= 0) { purplePickups.splice(i, 1); continue; } // expired! remove it.
+
+    if (p.x === player.x && p.y === player.y) {
+      // PLAYER PICKED IT UP!
+      purplePickups.splice(i, 1);
+      purpleStored = true; // now they can press SPACE to use it
+      spawnParticles(player.x, player.y, "#cc44ff", 10, 2);
+      showToast("⚡ PURPLE STORM READY — Press SPACE!");
+    }
+  }
+
+  // If purple storm is ACTIVE, count it down and zap enemies!
+  if (purpleTimer > 0) {
+    purpleTimer--;
+
+    // Every 6 frames, destroy ALL enemies currently on screen with purple arcs
+    if (frameCount % 6 === 0) {
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        spawnParticles(e.x, e.y, "#cc44ff", 5, 1.8); // purple explosion
+        spawnParticles(e.x, e.y, "#ffffff", 2, 1.2);  // white flash
+        xp += e.xp;
+        score += e.xp * 10;
+        enemies.splice(j, 1); // remove the enemy!
+        checkLevelUp();
+      }
+    }
+
+    // Storm just ended?
+    if (purpleTimer <= 0) {
+      showToast("⚡ Storm faded");
+      document.getElementById("purpleGifEl").style.display = "none";
+      spawnParticles(player.x, player.y, "#aa44ff", 14, 1.5);
+    }
+  }
+}
+
+
+// ─── WRENCH HEALING SYSTEM ────────────────────────────────────────────────────
+// Wrenches appear near you. Walk over one to heal yourself!
+
+function updateWrench() {
+  wrenchPickupSpawn--;
+  if (wrenchPickupSpawn <= 0) {
+    wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(px, py) === 0) wrenchPickups.push({ x: px, y: py, ttl: 20 * 60 });
+  }
+
+  for (let i = wrenchPickups.length - 1; i >= 0; i--) {
+    const w = wrenchPickups[i];
+    w.ttl--;
+    if (w.ttl <= 0) { wrenchPickups.splice(i, 1); continue; } // expired
+
+    if (w.x === player.x && w.y === player.y) {
+      // PLAYER PICKED IT UP! Heal 25% of max HP
+      wrenchPickups.splice(i, 1);
+      const heal = Math.round(player.maxHp * 0.25); // 25% of max HP as healing
+      player.hp = Math.min(player.hp + heal, player.maxHp); // don't go over max!
+      spawnParticles(player.x, player.y, "#44ff88", 12, 2);
+      spawnTextParticle(player.x, player.y - 1, `+${heal} HP`, "#44ff88"); // green floating number
+      showToast(`🔧 REPAIRED! +${heal} HP`);
+    }
+  }
+}
+
+
+// ─── RAGE SYSTEM ──────────────────────────────────────────────────────────────
+// Rage pickups appear near you. Pick one up, press SPACE to go BERSERK for 10 seconds!
+// While raging: everything in a 5x5 area around you is constantly destroyed!
+
+function updateRage() {
+  // Count down to the next pickup spawn
+  ragePickupSpawn--;
+  if (ragePickupSpawn <= 0) {
+    ragePickupSpawn = RAGE_PICKUP_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    const t = getTile(px, py);
+    if (t === 0) ragePickups.push({ x: px, y: py, ttl: 20 * 60 });
+  }
+
+  // Check each rage pickup
+  for (let i = ragePickups.length - 1; i >= 0; i--) {
+    const p = ragePickups[i];
+    p.ttl--;
+    if (p.ttl <= 0) { ragePickups.splice(i, 1); continue; }
+
+    if (p.x === player.x && p.y === player.y) {
+      ragePickups.splice(i, 1);
+      rageStored = true; // player now has rage ready!
+      spawnParticles(player.x, player.y, "#ff6600", 10, 2);
+      showToast("😡 RAGE READY — Press SPACE!");
+    }
+  }
+
+  // If rage is ACTIVE, run the destruction shockwave!
+  if (rageTimer > 0) {
+    rageTimer--;
+
+    // Every 4 frames, destroy everything in a 5x5 tile area around the player
+    // (-2 to +2 in each direction = 5 tiles wide and 5 tiles tall)
+    if (frameCount % 4 === 0) {
+      for (let ox = -2; ox <= 2; ox++) {
+        for (let oy = -2; oy <= 2; oy++) {
+          const tx = player.x + ox; // target tile X position
+          const ty = player.y + oy; // target tile Y position
+
+          // Kill any enemy on this tile
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            if (enemies[j].x === tx && enemies[j].y === ty) {
+              spawnParticles(tx, ty, "#ff2200", 5);
+              xp += enemies[j].xp;
+              score += enemies[j].xp * 10;
+              enemies.splice(j, 1);
+              checkLevelUp();
+            }
+          }
+
+          // Damage any boss that's near this tile too (bosses are 3 tiles wide so check radius)
+          for (let j = bosses.length - 1; j >= 0; j--) {
+            if (Math.abs(bosses[j].x - tx) <= 1 && Math.abs(bosses[j].y - ty) <= 1) {
+              bosses[j].hp -= 2; // rage deals 2 damage per tick to the boss
+              if (frameCount % 20 === 0) spawnParticles(bosses[j].x, bosses[j].y, "#ff2200", 4);
+            }
+          }
+
+          // Smash the tile itself (clears plants, boulders, walls etc.) - but not lava!
+          const t = getTile(tx, ty);
+          if (t !== 0 && t !== "lava") setTile(tx, ty, 0); // 0 = cleared to empty
+        }
+      }
+
+      // Shockwave burst of orange particles from the player
+      spawnParticles(player.x, player.y, "#ff4400", 6, 2.5);
+    }
+
+    // Rage just ran out?
+    if (rageTimer <= 0) {
+      showToast("😤 Rage over");
+      spawnParticles(player.x, player.y, "#ffaa00", 12, 1.5);
+    }
+  }
+}
+
+
+// ─── PROJECTILE SYSTEM ────────────────────────────────────────────────────────
+// Lightning bolts fly in straight lines and damage anything they touch.
+
+function updateProjectiles() {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+
+    // Move one step in its direction every frame
+    p.x += p.dx;
+    p.y += p.dy;
+    p.dist++; // track total distance traveled
+
+    let hit = false; // did it hit something?
+
+    // Check if it hit any regular enemy
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      // Math.round because the projectile position is fractional but enemy positions are whole numbers
+      if (enemies[j].x === Math.round(p.x) && enemies[j].y === Math.round(p.y)) {
+        enemies[j].curHp--; // deal 1 damage
+        if (enemies[j].curHp <= 0) {
+          // Enemy is dead!
+          spawnParticles(enemies[j].x, enemies[j].y, "#ff8800", 6);
+          spawnTextParticle(enemies[j].x, enemies[j].y, `+${enemies[j].xp}XP`);
+          xp += enemies[j].xp;
+          score += enemies[j].xp * 10;
+          enemies.splice(j, 1);
+          checkLevelUp();
+        }
+        hit = true;
+        break;
+      }
+    }
+
+    // If it didn't hit an enemy, check if it hit a boss
+    if (!hit) {
+      for (let j = bosses.length - 1; j >= 0; j--) {
+        // Bosses are huge (3x3 tiles) so check within 1 tile in any direction
+        if (Math.abs(p.x - bosses[j].x) <= 1 && Math.abs(p.y - bosses[j].y) <= 1) {
+          bosses[j].hp -= 5; // lightning deals 5 damage to bosses
+          hit = true;
+          spawnParticles(bosses[j].x, bosses[j].y, "#ff4444", 4, 1);
+          spawnTextParticle(bosses[j].x, bosses[j].y - 1, "-5", "#ff4444");
+          break;
+        }
+      }
+    }
+
+    // Remove the bolt if it hit something OR has traveled more than 30 tiles (range limit)
+    if (hit || p.dist > 30) projectiles.splice(i, 1);
+  }
+}
+
+
+// ─── LEVEL UP SYSTEM ──────────────────────────────────────────────────────────
+// Check if the player has earned enough XP to level up. Called after every kill!
+
+function checkLevelUp() {
+  if (level >= 15) return; // level 15 is the max! no more leveling up
+
+  // Do we have enough XP? Each level costs more: level 1 = 10xp, level 2 = 20xp, etc.
+  if (xp >= XP_PER_LEVEL * level) {
+    level++;
+    player.maxHp = Math.min(player.maxHp + 3, 150); // +3 max HP per level, capped at 150
+    player.hp = Math.min(player.hp + 5, player.maxHp); // also heal 5 HP (can't exceed max)
+
+    if (level === 15) {
+      showToast("🏆 MAX LEVEL! HP 150");
+    } else {
+      showToast(`⬆ LEVEL ${level}! +5 HP`);
+    }
+  }
+}
+
+// Show a short notification message at the top of the screen for 2 seconds, then fade it out.
+// Used for level ups, power-ups, boss kills, etc.
+function showToast(msg) {
+  const t = document.getElementById("levelUpToast");
+  t.textContent = msg;   // set the message text
+  t.style.opacity = "1"; // make it visible (CSS transition fades it in smoothly)
+
+  // After 2 seconds, make it invisible again (CSS transition fades it out)
+  setTimeout(() => { t.style.opacity = "0"; }, 2000);
+}
+
+
+// ─── BOSS SYSTEM ──────────────────────────────────────────────────────────────
+// Every 3 minutes a BOSS appears! It's huge, very tough, and smashes everything in its path.
+//
+// HOW TO HURT IT:
+//   - Lightning does 5 damage
+//   - Place mushrooms (U key) in its path - each one does 15 poison damage!
+//   - Rage power-up deals 2 damage per tick while nearby
+//
+// HOW TO STAY SAFE:
+//   - Doors block the boss (but it can't be blocked forever!)
+
+function updateBosses() {
+  // Count down the timer between bosses
+  if (bossTimer > 0) {
+    bossTimer--;
+    // 3 seconds before arrival (180 frames), flash the warning!
+    if (bossTimer === 180) showBossAlert();
+  } else {
+    // Timer hit zero! Spawn a new boss 18 tiles away from the player
+    const bX = player.x + (Math.random() > 0.5 ? 18 : -18); // randomly left or right
+    const bY = player.y + (Math.random() > 0.5 ? 18 : -18); // randomly above or below
+    bosses.push({
+      x: bX, y: bY,
+      hp: 40 + level * 5,    // HP scales with level (gets harder the higher your level!)
+      maxHp: 40 + level * 5,
+      timer: 0               // movement timer (starts at 0 so it moves right away)
+    });
+    bossTimer = BOSS_INTERVAL; // reset the countdown for the NEXT boss
+  }
+
+  // Update each active boss
+  for (let i = bosses.length - 1; i >= 0; i--) {
+    const b = bosses[i];
+    b.timer--;
+
+    if (b.timer <= 0) {
+      // Time to take a step! Higher level = moves faster (shorter wait between steps)
+      b.timer = Math.max(15, 35 - level * 2); // minimum 15 frames between moves
+
+      const dx = Math.sign(player.x - b.x);
+      const dy = Math.sign(player.y - b.y);
+
+      // Try to step toward the player. Same "wall sliding" as enemies.
+      // But BOSS CANNOT PASS THROUGH DOORS - that's what makes doors useful!
+      for (const [bdx, bdy] of [[dx, dy],[dx, 0],[0, dy]]) {
+        const nx = b.x + bdx, ny = b.y + bdy;
+        const nt = getTile(nx, ny);
+        if (nt === "door") continue; // nope! can't go through doors
+        b.x = nx; b.y = ny;
+        break;
+      }
+
+      // Did the boss step on a mushroom? POISON DAMAGE!
+      if (getTile(b.x, b.y) === "🍄") {
+        b.hp -= 15; // 15 poison damage!
+        setTile(b.x, b.y, 0); // consume the mushroom (it's gone now)
+        spawnParticles(b.x, b.y, "#aa44ff", 8);
+        spawnTextParticle(b.x, b.y - 1, "-15", "#aa44ff");
+      }
+
+      // Boss SMASHES everything in a 3x3 area as it walks!
+      // Nothing is safe from the boss - it destroys all tiles in its path.
+      for (let ox = -1; ox <= 1; ox++) {
+        for (let oy = -1; oy <= 1; oy++) {
+          const t = getTile(b.x + ox, b.y + oy);
+          if (t !== 0 && t !== "lava") setTile(b.x + ox, b.y + oy, 0); // SMASH!
+        }
+      }
+    }
+
+    // Is the boss within 1 tile of the player? ATTACK!
+    if (Math.abs(b.x - player.x) <= 1 && Math.abs(b.y - player.y) <= 1 && player.invincible <= 0) {
+      player.hp -= 15; // 15 damage - the boss hits HARD!
+      player.invincible = 40; // longer invincibility after a boss hit
+      shakeTimer = 20;
+
+      // KNOCKBACK: shove the player 2 tiles away from the boss!
+      // Math.sign gives direction: -1 (away left), 0 (same column), or +1 (away right)
+      player.x -= Math.sign(player.x - b.x) * 2;
+      player.y -= Math.sign(player.y - b.y) * 2;
+    }
+
+    // Did the boss run out of HP? It dies!
+    if (b.hp <= 0) {
+      spawnParticles(b.x, b.y, "#ffd700", 30, 3); // big gold explosion!
+      spawnTextParticle(b.x, b.y - 2, "BOSS DEFEATED!", "#ffd700");
+      score += 500 + level * 100; // huge score bonus!
+      xp += 25;                   // and lots of XP too!
+      bosses.splice(i, 1);        // remove the dead boss
+      checkLevelUp();
+      showToast("🏆 BOSS SLAIN! +500 SCORE");
+    }
+  }
+}
+
+// Flash the big "BOSS INCOMING" warning text in the center of the screen for 3 seconds.
+function showBossAlert() {
+  const el = document.getElementById("bossAlert");
+  el.style.opacity = "1"; // fade it in (CSS transition handles the smoothness)
+
+  // After 3 seconds, fade it back out
+  setTimeout(() => { el.style.opacity = "0"; }, 3000);
+}
+
+
+// ─── DAY/NIGHT CYCLE ──────────────────────────────────────────────────────────
+// dayTime ticks from 0.0 to 1.0 then wraps back around to 0.
+// Different ranges mean different times:
+//   0.0 to 0.4 = daytime (bright, fewer enemies)
+//   0.4 to 0.5 = dusk (fading to dark)
+//   0.5 to 0.9 = nighttime (dark, bats and skulls spawn, more enemies!)
+//   0.9 to 1.0 = dawn (getting light again)
+
+function updateDayNight() {
+  // Move time forward by a tiny fraction each frame
+  // % 1 makes it loop: when it reaches 1.0 it wraps back to 0.0
+  dayTime = (dayTime + 1 / DAY_CYCLE) % 1;
+}
+
+// Calculate how dark the screen should be right now.
+// Returns 0.0 (no darkness = full day) up to 0.75 (very dark = midnight).
+function getDayNightOverlay() {
+  const t = dayTime;
+  let darkness;
+  if (t < 0.4)      darkness = 0;                         // full day - no darkness at all
+  else if (t < 0.5) darkness = (t - 0.4) / 0.1 * 0.75;  // dusk - gradually getting darker
+  else if (t < 0.9) darkness = 0.75;                      // night - full darkness
+  else              darkness = (1 - t) / 0.1 * 0.75;     // dawn - gradually getting lighter
+  return darkness;
+}
+
+// Return the current phase info for the HUD label (text, color)
+function getDayLabel() {
+  const t = dayTime;
+  if (t < 0.4) return { emoji: "☀", text: "DAY",   color: "#ffdd44" };
+  if (t < 0.5) return { emoji: "🌅", text: "DUSK",  color: "#ff8844" };
+  if (t < 0.9) return { emoji: "🌙", text: "NIGHT", color: "#8888ff" };
+  return              { emoji: "🌄", text: "DAWN",  color: "#ffaa44" };
+}
+
+// Draw the small sun/moon timeline bar in the HUD.
+// It shows a dot moving along a colorful track representing the full day cycle.
+function drawDayBar() {
+  const bc = document.getElementById("dayBar"); // the small canvas element in the HUD
+  const bx = bc.getContext("2d");               // its drawing context
+  const W = bc.width, H = bc.height;            // 160px wide x 28px tall
+
+  bx.clearRect(0, 0, W, H); // wipe it clean
+
+  // The track sits centered vertically with 14px margins left and right
+  // (leaving space for the sun and moon icons at each end)
+  const trackY = H / 2, trackH = 6, trackR = 3;
+  const trackX = 14, trackW = W - 28;
+
+  // Draw the dark background strip
+  bx.fillStyle = "#0a0a1a";
+  bx.beginPath();
+  bx.roundRect(trackX, trackY - trackH/2, trackW, trackH, trackR);
+  bx.fill();
+
+  // Draw the colorful day/night gradient on top of it
+  // The gradient colors match what time of day each position represents!
+  const grad = bx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+  grad.addColorStop(0,    "#ffdd44"); // start = bright sunny day
+  grad.addColorStop(0.4,  "#ffcc00"); // late afternoon, still bright
+  grad.addColorStop(0.45, "#ff6622"); // dusk - warm orange!
+  grad.addColorStop(0.5,  "#220066"); // early night - dark purple
+  grad.addColorStop(0.9,  "#110044"); // late night - very dark
+  grad.addColorStop(1,    "#ff9944"); // just before dawn - warm orange again
+  bx.fillStyle = grad;
+  bx.beginPath();
+  bx.roundRect(trackX, trackY - trackH/2, trackW, trackH, trackR);
+  bx.fill();
+
+  // The indicator dot: maps dayTime 0→1 to left→right across the track
+  const indicX = trackX + dayTime * trackW;
+  const isNight = dayTime > 0.45 && dayTime < 0.95;
+  const glowColor = isNight ? "#8888ff" : "#ffdd44"; // blue glow at night, gold during day
+
+  // Draw glowing circle dot at current time position
+  bx.shadowColor = glowColor;
+  bx.shadowBlur = 8;
+  bx.beginPath();
+  bx.arc(indicX, trackY, 7, 0, Math.PI * 2); // circle with radius 7
+  bx.fillStyle = isNight ? "#222255" : "#000";
+  bx.fill();
+  bx.strokeStyle = glowColor;
+  bx.lineWidth = 2;
+  bx.stroke();
+  bx.shadowBlur = 0; // ALWAYS reset shadowBlur after using it!
+
+  // Tiny emoji inside the dot: sun during day, moon at night
+  bx.font = "9px serif";
+  bx.textAlign = "center";
+  bx.textBaseline = "middle";
+  bx.fillText(isNight ? "🌙" : "☀", indicX, trackY);
+
+  // Small vertical tick marks at dusk (0.4), midnight (0.5), and dawn (0.9)
+  const ticks = [0.4, 0.5, 0.9];
+  for (const tick of ticks) {
+    const tx = trackX + tick * trackW;
+    bx.strokeStyle = "#ffffff22"; // very faint white
+    bx.lineWidth = 1;
+    bx.beginPath();
+    bx.moveTo(tx, trackY - trackH/2 - 2);
+    bx.lineTo(tx, trackY + trackH/2 + 2);
+    bx.stroke();
+  }
+
+  // Small sun and moon icons outside the ends of the bar
+  bx.font = "10px serif";
+  bx.textAlign = "center"; bx.textBaseline = "middle";
+  bx.globalAlpha = 0.7;
+  bx.fillText("☀", trackX - 8, trackY);        // sun on the left (daytime side)
+  bx.fillText("🌙", trackX + trackW + 8, trackY); // moon on the right (nighttime side)
+  bx.globalAlpha = 1;
+}
+
+
+// ─── DRAW FUNCTIONS ───────────────────────────────────────────────────────────
+// These functions paint everything to the canvas every frame.
+// The canvas is completely redrawn from scratch 60 times per second!
+// It's like a flipbook: draw a slightly different picture really fast and it looks animated.
+
+// Draw the boss HP bar floating above its head
+function drawBossHealth(b) {
+  const barW = TILE * 3; // 3 tiles wide (same as the boss sprite size)
+  const barH = 10;       // 10 pixels tall
+
+  // Position: centered horizontally above the boss
+  const px = (b.x) * TILE - camera.x + TILE / 2 - barW / 2;
+  const py = (b.y - 1) * TILE - camera.y - 20; // 20 pixels above the boss sprite
+
+  // Black background rectangle behind the bar
+  ctx.fillStyle = "#000";
+  ctx.fillRect(px - 1, py - 1, barW + 2, barH + 2);
+
+  // Health fill: changes color depending on how much HP is left
+  const pct = Math.max(0, b.hp / b.maxHp); // 0.0 to 1.0 (fully dead to fully alive)
+  ctx.fillStyle = pct > 0.5 ? "#00ff44" : pct > 0.25 ? "#ffaa00" : "#ff2200"; // green → orange → red
+  ctx.fillRect(px, py, barW * pct, barH); // width shrinks as HP drops!
+
+  // White border around the bar
+  ctx.strokeStyle = "#ffffff44"; // semi-transparent white
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px, py, barW, barH);
+
+  // "BOSS 35/80" text label above the bar
+  ctx.font = "10px 'Share Tech Mono'";
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.fillText(`BOSS ${Math.ceil(b.hp)}/${b.maxHp}`, px + barW / 2, py - 4);
+}
+
+// THE BIG DRAW FUNCTION - paints the entire game to the canvas every frame!
+function draw() {
+
+  // ── SCREEN SHAKE ──
+  // Apply random offsets to the camera when shakeTimer > 0
+  let shakeX = 0, shakeY = 0;
+  if (shakeTimer > 0) {
+    shakeX = (Math.random() - 0.5) * 8; // random between -4 and +4 pixels
+    shakeY = (Math.random() - 0.5) * 8;
+    shakeTimer--;
+  }
+
+  // ── CLEAR THE SCREEN ──
+  // Fill the whole canvas with black to erase the previous frame
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // ── CAMERA TRACKING ──
+  // The camera follows the player but only AFTER they leave a "dead zone" in the center.
+  // This means the player can walk a few tiles before the camera starts scrolling.
+  const playerScreenX = player.x * TILE - camera.x; // where the player appears on screen (in pixels)
+  const playerScreenY = player.y * TILE - camera.y;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // If the player goes outside the dead zone, nudge the camera target
+  if (playerScreenX < centerX - DEAD_ZONE) cameraTarget.x = player.x * TILE - (centerX - DEAD_ZONE);
+  if (playerScreenX > centerX + DEAD_ZONE) cameraTarget.x = player.x * TILE - (centerX + DEAD_ZONE);
+  if (playerScreenY < centerY - DEAD_ZONE) cameraTarget.y = player.y * TILE - (centerY - DEAD_ZONE);
+  if (playerScreenY > centerY + DEAD_ZONE) cameraTarget.y = player.y * TILE - (centerY + DEAD_ZONE);
+
+  // Move camera 8% closer to its target each frame (easing = smooth catch-up) + apply shake
+  camera.x += (cameraTarget.x - camera.x) * CAM_EASE + shakeX;
+  camera.y += (cameraTarget.y - camera.y) * CAM_EASE + shakeY;
+
+  // ── FIGURE OUT WHICH TILES ARE VISIBLE ──
+  // No need to draw tiles completely off-screen! That would waste processing time.
+  const sx = Math.floor(camera.x / TILE) - 1; // leftmost visible tile column
+  const sy = Math.floor(camera.y / TILE) - 1; // topmost visible tile row
+  const ex = sx + Math.ceil(canvas.width / TILE) + 2;  // rightmost visible column
+  const ey = sy + Math.ceil(canvas.height / TILE) + 2; // bottommost visible row
+
+  // ── DRAW GRID LINES ──
+  // Faint lines between tiles give a nice "grid world" atmosphere
+  const darkness = getDayNightOverlay();
+  ctx.strokeStyle = darkness > 0.5 ? "#0a1a0a" : "#111"; // darker green grid at night
+  ctx.lineWidth = 0.5;
+  for (let gx = sx; gx < ex; gx++) {
+    const px = gx * TILE - camera.x;
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, canvas.height); ctx.stroke();
+  }
+  for (let gy = sy; gy < ey; gy++) {
+    const py = gy * TILE - camera.y;
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(canvas.width, py); ctx.stroke();
+  }
+
+  // ── DRAW ALL VISIBLE TILES ──
+  ctx.font = TILE + "px serif";    // emoji font size = one full tile width
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (let y = sy; y < ey; y++) {
+    for (let x = sx; x < ex; x++) {
+      const t = getTile(x, y); // get this tile (generates it if not seen before!)
+
+      // Convert tile coordinates to screen pixel coordinates
+      // camera.x/y is the scroll offset: subtracting it converts world→screen
+      const px = x * TILE - camera.x + TILE / 2; // pixel center of this tile
+      const py = y * TILE - camera.y + TILE / 2;
+
+      if (t === "lava") {
+        // LAVA: orange/red flickering rectangle with a radial glow
+        const flicker = 0.8 + 0.2 * Math.sin(frameCount * 0.1 + x + y); // wobbling brightness
+
+        ctx.fillStyle = `rgba(255,${Math.floor(60 * flicker)},0,1)`; // orange lava color
+        ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+
+        // Soft radial gradient glowing outward from the lava (like heat shimmer!)
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, TILE);
+        grad.addColorStop(0, `rgba(255,100,0,${0.3 * flicker})`); // bright in center
+        grad.addColorStop(1, "transparent"); // fades to nothing at the edge
+        ctx.fillStyle = grad;
+        ctx.fillRect(x * TILE - camera.x - TILE, y * TILE - camera.y - TILE, TILE * 3, TILE * 3);
+
+      } else if (t === "iron") {
+        // IRON WALL: dark blue-grey square with an inner border for a "metal panel" look
+        ctx.fillStyle = "#334";
+        ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        ctx.strokeStyle = "#556"; // slightly lighter color for the inner bevel
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x * TILE - camera.x + 2, y * TILE - camera.y + 2, TILE - 4, TILE - 4);
+
+      } else if (t === "door") {
+        // DOOR: brown wooden door with two plank panels and a gold knob
+        ctx.fillStyle = "#5a3010"; // outer frame: dark brown
+        ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+
+        ctx.fillStyle = "#7a4820"; // lighter brown for the planks
+        const bx2 = x * TILE - camera.x, by2 = y * TILE - camera.y;
+        ctx.fillRect(bx2 + 4, by2 + 2, (TILE-8)/2 - 1, TILE - 4); // left plank
+        ctx.fillRect(bx2 + 4 + (TILE-8)/2 + 2, by2 + 2, (TILE-8)/2 - 1, TILE - 4); // right plank
+
+        ctx.fillStyle = "#ffd700"; // gold doorknob
+        ctx.beginPath();
+        ctx.arc(bx2 + TILE * 0.65, by2 + TILE * 0.55, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = "#3a1a00"; // very dark brown outer border
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx2 + 2, by2 + 2, TILE - 4, TILE - 4);
+
+      } else if (typeof t === "string") {
+        // EMOJI TILE (tree, cactus, mushroom, boulder etc): just draw the emoji!
+        ctx.fillText(t, px, py);
+      }
+      // t === 0 means empty ground: we draw nothing, just show the black/grid background
+    }
+  }
+
+  // ── DRAW RAGE PICKUPS ──
+  // Pulse them gently, flicker rapidly when they're about to expire
+  for (const rp of ragePickups) {
+    const rpx = rp.x * TILE - camera.x; // top-left corner in screen pixels
+    const rpy = rp.y * TILE - camera.y;
+    const expiring = rp.ttl < 3 * 60; // last 3 seconds?
+
+    // Calculate transparency: slow gentle pulse normally, rapid flicker when expiring
+    const pulse = expiring
+      ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) // fast flicker
+      : 0.7 + 0.3 * Math.sin(frameCount * 0.12);            // gentle sine wave pulse
+
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 14 * pulse; // orange glow
+
+    if (rageIconImg.complete && rageIconImg.naturalWidth > 0) {
+      ctx.drawImage(rageIconImg, rpx + 2, rpy + 2, TILE - 4, TILE - 4); // draw the icon image
+    } else {
+      ctx.font = (TILE * 0.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("😡", rpx + TILE/2, rpy + TILE/2); // fallback emoji if image not loaded
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1; // always reset after each pickup!
+  }
+
+  // ── DRAW PURPLE PICKUPS ──
+  for (const pp of purplePickups) {
+    const ppx = pp.x * TILE - camera.x;
+    const ppy = pp.y * TILE - camera.y;
+    const expiring = pp.ttl < 3 * 60;
+    const pulse = expiring
+      ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1)
+      : 0.7 + 0.3 * Math.sin(frameCount * 0.15); // slightly different speed than rage
+
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#cc44ff"; ctx.shadowBlur = 14 * pulse; // purple glow
+
+    if (purpleIconImg.complete && purpleIconImg.naturalWidth > 0) {
+      ctx.drawImage(purpleIconImg, ppx + 2, ppy + 2, TILE - 4, TILE - 4);
+    } else {
+      ctx.font = (TILE * 0.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("⚡", ppx + TILE/2, ppy + TILE/2);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // ── DRAW WRENCH PICKUPS ──
+  for (const wp of wrenchPickups) {
+    const wpx = wp.x * TILE - camera.x;
+    const wpy = wp.y * TILE - camera.y;
+    const expiring = wp.ttl < 3 * 60;
+    const pulse = expiring
+      ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1)
+      : 0.7 + 0.3 * Math.sin(frameCount * 0.13);
+
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#44ff88"; ctx.shadowBlur = 14 * pulse; // green glow
+
+    if (wrenchIconImg.complete && wrenchIconImg.naturalWidth > 0) {
+      ctx.drawImage(wrenchIconImg, wpx + 2, wpy + 2, TILE - 4, TILE - 4);
+    } else {
+      ctx.font = (TILE * 0.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("🔧", wpx + TILE/2, wpy + TILE/2);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // ── DRAW ENEMIES ──
+  ctx.font = TILE * 0.8 + "px serif"; // slightly smaller than a full tile
+  for (const e of enemies) {
+    const px = e.x * TILE + TILE / 2 - camera.x;
+    const py = e.y * TILE + TILE / 2 - camera.y;
+
+    // Night-only enemies get glowing red eyes in the dark - spooky!
+    if (e.night && darkness > 0.3) {
+      ctx.shadowColor = "#ff0000";
+      ctx.shadowBlur = 8; // red glow around the enemy
+    }
+    ctx.fillText(e.emoji, px, py); // draw the emoji (👻🧟🦇💀)
+    ctx.shadowBlur = 0; // reset after each enemy
+  }
+
+  // ── DRAW PROJECTILES (lightning bolts) ──
+  ctx.font = TILE * 0.7 + "px serif";
+  for (const p of projectiles) {
+    ctx.shadowColor = "#88ffff"; ctx.shadowBlur = 10; // cyan electric glow
+    ctx.fillText("⚡", p.x * TILE + TILE / 2 - camera.x, p.y * TILE + TILE / 2 - camera.y);
+  }
+  ctx.shadowBlur = 0;
+
+  // ── DRAW BOSSES ──
+  for (const b of bosses) {
+    const bossSize = TILE * 3; // boss sprite is 3 tiles × 3 tiles = 108 × 108 pixels
+    if (bossImg.complete && bossImg.naturalWidth > 0) {
+      // Draw the boss image, positioned 1 tile up and left from the boss center
+      ctx.drawImage(bossImg, (b.x - 1) * TILE - camera.x, (b.y - 1) * TILE - camera.y, bossSize, bossSize);
+    } else {
+      // Fallback: draw a giant 👹 emoji if the image hasn't loaded yet
+      ctx.font = bossSize + "px serif";
+      ctx.fillText("👹", b.x * TILE + TILE / 2 - camera.x, b.y * TILE + TILE / 2 - camera.y);
+    }
+    drawBossHealth(b); // draw the HP bar above the boss
+  }
+
+  // ── DRAW PLAYER AND POWER-UP EFFECTS ──
+  const rageEl = document.getElementById("rageGifEl");
+  const purpleEl = document.getElementById("purpleGifEl");
+
+  if (purpleTimer > 0) {
+    // PURPLE STORM ACTIVE: purple tinted screen + random lightning arcs + GIF overlay
+
+    // Pulsing purple overlay on the whole screen
+    const vAlpha = 0.1 + 0.07 * Math.sin(frameCount * 0.25); // gently oscillates
+    ctx.fillStyle = `rgba(100,0,200,${vAlpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Every 3 frames: draw a random lightning arc from player to a random screen point
+    if (frameCount % 3 === 0) {
+      ctx.strokeStyle = `rgba(180,80,255,${0.3 + 0.2 * Math.random()})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const ex2 = Math.random() * canvas.width;   // random X anywhere on screen
+      const ey2 = Math.random() * canvas.height;  // random Y anywhere on screen
+      ctx.moveTo(player.x * TILE + TILE/2 - camera.x, player.y * TILE + TILE/2 - camera.y);
+      ctx.lineTo(ex2, ey2); // draw the arc line
+      ctx.stroke();
+    }
+
+    // Position the purple GIF animation centered on the player
+    const purpleSize = TILE * 2;
+    const ppx2 = player.x * TILE + TILE/2 - camera.x - purpleSize/2; // center it
+    const ppy2 = player.y * TILE + TILE/2 - camera.y - purpleSize/2;
+    purpleEl.style.display = "block";
+    purpleEl.style.left = Math.round(ppx2) + "px";
+    purpleEl.style.top = Math.round(ppy2) + "px";
+    purpleEl.style.width = purpleSize + "px";
+    purpleEl.style.height = purpleSize + "px";
+    // Pulsing glow using a CSS filter with a sine wave
+    purpleEl.style.filter = `drop-shadow(0 0 ${8 + 5 * Math.sin(frameCount * 0.2)}px #cc44ff)`;
+  } else {
+    purpleEl.style.display = "none"; // hide when not active
+  }
+
+  if (rageTimer > 0) {
+    // RAGE ACTIVE: red screen tint + rage GIF overlay over the player
+
+    const rageSize = TILE * 2;
+    const rpx = player.x * TILE + TILE/2 - camera.x - rageSize/2; // center on player
+    const rpy = player.y * TILE + TILE/2 - camera.y - rageSize/2;
+
+    // Pulsing red overlay on the entire screen
+    const vAlpha = 0.12 + 0.08 * Math.sin(frameCount * 0.2);
+    ctx.fillStyle = `rgba(255,30,0,${vAlpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Show and position the rage GIF
+    rageEl.style.display = "block";
+    rageEl.style.left = Math.round(rpx) + "px";
+    rageEl.style.top = Math.round(rpy) + "px";
+    rageEl.style.width = rageSize + "px";
+    rageEl.style.height = rageSize + "px";
+    rageEl.style.filter = `drop-shadow(0 0 ${10 + 6 * Math.sin(frameCount * 0.15)}px #ff2200)`;
+  } else {
+    rageEl.style.display = "none"; // hide rage GIF
+
+    // Only draw the robot player sprite when no power-up GIF is covering it
+    if (purpleTimer <= 0) {
+      ctx.font = TILE + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      // Flicker the player during invincibility frames (visual "I got hit!" feedback)
+      // Every 3 frames: alternate between visible (1.0) and dim (0.4)
+      if (player.invincible > 0 && Math.floor(frameCount / 3) % 2 === 0) ctx.globalAlpha = 0.4;
+      ctx.fillText(
+        player.hp > 0 ? "🤖" : "☠️", // alive = robot emoji, dead = skull emoji
+        player.x * TILE + TILE/2 - camera.x,
+        player.y * TILE + TILE/2 - camera.y
+      );
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── DRAW PARTICLES ──
+  // Draw AFTER everything else so sparkles appear on top of all tiles and characters!
+  drawParticles();
+
+  // ── DAY/NIGHT DARKNESS OVERLAY ──
+  // A dark blue semi-transparent rectangle that covers the whole screen.
+  // At night it's very dark, during day it's invisible (darkness=0 so nothing drawn).
+  if (darkness > 0) {
+    ctx.fillStyle = `rgba(0,5,30,${darkness})`; // dark midnight blue color
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw twinkling stars at night! (only when dark enough)
+    if (darkness > 0.4) {
+      for (let s = 0; s < 80; s++) {
+        // Give each star a fixed but spread-out position based on its index number
+        const sx2 = ((s * 173 + frameCount * 0.5) % canvas.width); // slowly drifts right
+        const sy2 = ((s * 97) % (canvas.height * 0.6)); // in the upper 60% of screen (sky area)
+
+        // Each star twinkles at its own rate using a sine wave
+        const twinkle = 0.5 + 0.5 * Math.sin(frameCount * 0.05 + s); // 0.0 to 1.0
+        ctx.globalAlpha = twinkle * (darkness - 0.4) * 2; // only bright at full night
+        ctx.fillStyle = "rgba(255,255,255,1)";
+        ctx.fillRect(sx2, sy2, 1.5, 1.5); // tiny 1.5×1.5 pixel white dot = a star!
+      }
+      ctx.globalAlpha = 1; // reset!
+    }
+  }
+
+  // ── UPDATE HUD HTML ELEMENTS ──
+  // Update all the info text and bars in the HUD at the top of the screen
+
+  // HP bar fill width (percentage of max HP)
+  const hpPct = Math.max(0, player.hp / player.maxHp * 100);
+  document.getElementById("hpFill").style.width = hpPct + "%";
+  document.getElementById("hpVal").textContent = Math.ceil(player.hp); // round up so "1" shows before 0
+
+  document.getElementById("scoreVal").textContent = score;
+  document.getElementById("levelVal").textContent = level;
+
+  // Boss timer: convert frames to MM:SS display format
+  const sec = Math.ceil(bossTimer / 60); // divide frames by 60fps to get seconds
+  document.getElementById("bossTimerVal").textContent =
+    `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, "0")}`;
+    // padStart(2,"0") makes "3" into "03" so it always shows 2 digits
+
+  // Day/night label text and color
+  const dl = getDayLabel();
+  document.getElementById("dayPhaseLbl").textContent = dl.text;
+  document.getElementById("dayPhaseLbl").style.color = dl.color;
+
+  drawDayBar(); // redraw the small sun/moon timeline bar
+
+  // ── RAGE HUD BAR ──
+  const rageSection = document.getElementById("rageSection");
+  if (rageStored || rageTimer > 0) {
+    rageSection.style.display = "flex"; // show it
+    const rageFill = document.getElementById("rageFill");
+    const rageLabel = document.getElementById("rageLabel");
+
+    if (rageTimer > 0) {
+      // Rage is ACTIVE: show a shrinking bar counting down
+      const pct = rageTimer / RAGE_DURATION * 100; // percentage remaining
+      rageFill.style.width = pct + "%";
+      rageFill.style.background = "linear-gradient(90deg,#ff2200,#ff8800)";
+      rageLabel.textContent = Math.ceil(rageTimer / 60) + "s"; // e.g. "8s"
+      rageLabel.style.color = "#ff4400";
+    } else {
+      // Rage is STORED (ready to activate): show full bar with "READY"
+      rageFill.style.width = "100%";
+      rageFill.style.background = "linear-gradient(90deg,#ff6600,#ffcc00)";
+      rageLabel.textContent = "READY";
+      rageLabel.style.color = "#ffcc00";
+    }
+  } else {
+    rageSection.style.display = "none"; // hide when we don't have rage
+  }
+
+  // ── PURPLE HUD BAR ──
+  const purpleSection = document.getElementById("purpleSection");
+  if (purpleStored || purpleTimer > 0) {
+    purpleSection.style.display = "flex";
+    const purpleFill = document.getElementById("purpleFill");
+    const purpleLabel = document.getElementById("purpleLabel");
+
+    if (purpleTimer > 0) {
+      // Purple is ACTIVE: show shrinking countdown bar
+      purpleFill.style.width = (purpleTimer / PURPLE_ELEC_DURATION * 100) + "%";
+      purpleLabel.textContent = Math.ceil(purpleTimer / 60) + "s";
+      purpleLabel.style.color = "#cc44ff";
+    } else {
+      // Purple is STORED: show full "READY" bar
+      purpleFill.style.width = "100%";
+      purpleLabel.textContent = "READY";
+      purpleLabel.style.color = "#dd88ff";
+    }
+  } else {
+    purpleSection.style.display = "none"; // hide when we don't have it
+  }
+
+  // ── PAUSE OVERLAY ──
+  if (paused) {
+    // Hide the GIF overlays while paused (they'd keep animating over the pause screen!)
+    document.getElementById("rageGifEl").style.display = "none";
+    document.getElementById("purpleGifEl").style.display = "none";
+    drawPauseOverlay();
+  }
+
+  // ── DEATH CHECK ──
+  if (player.hp <= 0) {
+    // Clean up GIF overlays
+    document.getElementById("rageGifEl").style.display = "none";
+    document.getElementById("purpleGifEl").style.display = "none";
+
+    // Play the death sound exactly ONCE.
+    // The _deadPlayed flag prevents this block from running every single frame!
+    if (!_deadPlayed) {
+      _deadPlayed = true; // set the flag immediately so this only runs once
+      document.getElementById("bgMusic").pause(); // stop the background music
+      const deadSound = document.getElementById("deadSound");
+      deadSound.volume = 0.8;       // 80% volume
+      deadSound.currentTime = 0;    // rewind to the start of the sound
+      deadSound.play().catch(() => {}); // play it! (.catch quietly handles browser blocks)
+    }
+
+    // Show the final score and the GAME OVER screen
+    document.getElementById("finalScore").textContent = `Score: ${score} | Level: ${level}`;
+    document.getElementById("gameOverScreen").style.display = "flex";
+  }
+}
+
+
+// ─── COOLDOWN UPDATER ─────────────────────────────────────────────────────────
+// Every frame, count all active cooldown timers down by 1.
+// When a timer reaches 0, delete it - meaning that action can be used again!
+// Think of it like a "recharge" system on a superpower.
+
+function updateCooldowns() {
+  for (const k in actionCooldown) {
+    actionCooldown[k]--; // count down this cooldown by 1 frame
+    if (actionCooldown[k] <= 0) delete actionCooldown[k]; // fully recharged! remove it.
+  }
+  // Invincibility after being hit also counts down here
+  if (player.invincible > 0) player.invincible--;
+}
+
+
+// ─── PAUSE SYSTEM ─────────────────────────────────────────────────────────────
+// Pausing freezes the game loop and stops music. Unpausing restarts both.
+
+function togglePause() {
+  paused = !paused; // flip the switch: true→false or false→true
+  const btn = document.getElementById("pauseBtn");
+  const music = document.getElementById("bgMusic");
+
+  if (paused) {
+    btn.textContent = "▶ RESUME";
+    btn.style.color = "#ffd700";       // gold while paused
+    btn.style.borderColor = "#ffd700";
+    music.pause(); // silence the music
+  } else {
+    btn.textContent = "⏸ PAUSE";
+    btn.style.color = "#88ff88";       // back to green while running
+    btn.style.borderColor = "#1a4a1a";
+    music.play().catch(() => {});      // resume music
+    loop();                            // restart the game loop (it stopped when paused!)
+  }
+}
+
+// Draw the dimmed "PAUSED" overlay screen
+function drawPauseOverlay() {
+  // Semi-transparent dark rectangle to dim the game underneath
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Big centered "PAUSED" text with a golden glow
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "bold 28px 'Press Start 2P', monospace";
+  ctx.fillStyle = "#ffd700";
+  ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 20; // golden glow!
+  ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 16);
+  ctx.shadowBlur = 0; // always reset!
+
+  // Smaller instruction text below
+  ctx.font = "12px 'Share Tech Mono', monospace";
+  ctx.fillStyle = "#448844";
+  ctx.fillText("click RESUME or press P to continue", canvas.width / 2, canvas.height / 2 + 22);
+}
+
+
+// ─── MAIN GAME LOOP ───────────────────────────────────────────────────────────
+// This is the HEARTBEAT of the entire game!
+// It runs approximately 60 times per second using requestAnimationFrame.
+// Each call to loop() is one "frame" - like one drawing in a flipbook.
+//
+// The pattern:
+//   1. Update all game state (move things, check collisions, spawn enemies...)
+//   2. Draw everything to the canvas
+//   3. Call requestAnimationFrame(loop) to schedule the NEXT frame
+//
+// Step 3 creates the endless cycle that makes the game run continuously!
+
+function loop() {
+  if (!gameStarted || paused) return; // stop if the game hasn't started or is paused
+
+  frameCount++; // one more frame has passed! (used for timers and animations)
+
+  // -- UPDATE STEP (run all the game logic) --
+  handleMovement();    // read arrow keys and move the player
+  handleActions();     // read action keys: build tiles, fire lightning, use power-ups
+  updateEnemies();     // spawn new enemies, move them, check if they hit the player
+  updateBosses();      // move the boss, check mushroom poison, handle player knockback
+  updateProjectiles(); // fly lightning bolts forward, check what they hit
+  updateRage();        // spawn/collect rage pickups and run the rage destruction wave
+  updatePurple();      // spawn/collect purple pickups and run the lightning storm
+  updateWrench();      // spawn/collect wrench healing pickups
+  updateParticles();   // move sparkle effects, remove ones that have expired
+  updateDayNight();    // advance the time of day by one tiny step
+  updateCooldowns();   // count down all ability recharge timers
+
+  // -- DRAW STEP (render everything visually) --
+  draw(); // paint the complete game frame to the canvas!
+
+  // -- SCHEDULE NEXT FRAME --
+  // requestAnimationFrame tells the browser: "call loop() again on the very next screen refresh"
+  // Screens typically refresh 60 times per second, so this keeps the game smooth!
+  requestAnimationFrame(loop);
+}
+
+
+// ─── START GAME ───────────────────────────────────────────────────────────────
+// This function runs when the player clicks the "START GAME" button!
+
+function startGame() {
+  _deadPlayed = false; // reset the death sound flag (fresh start!)
+
+  // Hide the title screen - time to play!
+  document.getElementById("titleScreen").style.display = "none";
+
+  // Pre-place some interesting structures around the starting area
+  for (let i = 0; i < 15; i++) spawnStructure("room");  // 15 iron-wall rooms
+  for (let i = 0; i < 10; i++) spawnStructure("cross"); // 10 boulder crosses
+
+  // Pre-generate all tiles in a 25×25 area around the start position (0,0).
+  // Without this, the area would look blank when the game first loads!
+  // Just calling getTile() is enough - it auto-generates AND saves each tile.
+  for (let x = -12; x <= 12; x++) {
+    for (let y = -12; y <= 12; y++) {
+      getTile(x, y);
+    }
+  }
+
+  // Start the background music at 30% volume (not too loud!)
+  const music = document.getElementById("bgMusic");
+  music.volume = 0.3;
+  music.play().catch(() => {}); // .catch() silently handles browsers that block autoplay
+
+  // Mark the game as started and kick off the main loop!
+  gameStarted = true;
+  loop(); // THIS is what starts everything running!
+}
+
+// Connect the HTML Start button to our startGame function
+// When the button is clicked, startGame() will be called
+document.getElementById("startBtn").onclick = startGame;
+</script>
+</body>
+</html>
