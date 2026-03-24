@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Builder Bros. - Boss Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #88ff88;
+    --red: #ff4444;
+    --gold: #ffd700;
+    --dark: #000;
+    --panel: rgba(0,20,0,0.85);
+  }
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);
+  }
+  canvas { display: block; }
+  /* ── HUD ── */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 16px;
+    padding: 8px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid #1a4a1a;
+    z-index: 900;
+    font-size: 13px;
+    backdrop-filter: blur(4px);
+  }
+  #hud .section { display: flex; align-items: center; gap: 8px; }
+  #hud .sep { color: #1a4a1a; font-size: 18px; }
+  #hpBar { width: 120px; height: 12px; background: #111; border: 1px solid #333; border-radius: 2px; overflow: hidden; }
+  #hpFill { height: 100%; background: linear-gradient(90deg,#ff4444,#ff8800); transition: width 0.2s; border-radius: 2px; }
+  #bossTimerVal { color: var(--gold); font-family: 'Press Start 2P', monospace; font-size: 11px; }
+  #dayLabel { font-family: 'Press Start 2P', monospace; font-size: 10px; min-width: 80px; text-align:right; }
+  #scoreVal { color: var(--gold); }
+  #levelVal { color: #88ffff; }
+  .hud-label { color: #448844; font-size: 11px; }
+  /* ── CONTROLS BAR ── */
+  #controls {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--panel);
+    border-top: 1px solid #1a4a1a;
+    padding: 5px 12px;
+    font-size: 11px; color: #448844;
+    z-index: 900;
+    display: flex; gap: 12px; flex-wrap: wrap;
+    backdrop-filter: blur(4px);
+  }
+  #controls span { color: var(--green); }
+  /* ── TITLE SCREEN ── */
+  #titleScreen {
+    position: fixed; inset: 0;
+    background: #000;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    z-index: 2000; text-align: center;
+    gap: 16px;
+  }
+  #ascii {
+    font-size: 9px; line-height: 13px;
+    color: var(--green);
+    text-shadow: 0 0 8px #88ff88, 0 0 20px #44aa44;
+    letter-spacing: 0;
+    animation: flicker 4s infinite;
+  }
+  @keyframes flicker {
+    0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.85} 95%{opacity:1} 97%{opacity:0.9}
+  }
+  #titleText {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: var(--gold);
+    text-shadow: 0 0 12px var(--gold);
+    letter-spacing: 2px;
+  }
+  #subtitleText { color: #448844; font-size: 13px; max-width: 560px; line-height: 1.6; }
+  #startBtn {
+    padding: 14px 40px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    background: #000;
+    color: var(--green);
+    border: 2px solid var(--green);
+    cursor: pointer;
+    letter-spacing: 2px;
+    box-shadow: 0 0 12px #44aa44;
+    transition: all 0.15s;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 12px #44aa44} 50%{box-shadow:0 0 24px #88ff88,0 0 40px #44aa44} }
+  #startBtn:hover { background: var(--green); color: #000; box-shadow: 0 0 30px #88ff88; }
+  #keyHints { color: #336633; font-size: 12px; }
+  /* ── OVERLAYS ── */
+  .overlay {
+    position: fixed; inset: 0;
+    display: none; flex-direction: column;
+    justify-content: center; align-items: center;
+    z-index: 3000; text-align: center; gap: 16px;
+    backdrop-filter: blur(6px);
+  }
+  #gameOverScreen { background: rgba(0,0,0,0.92); color: var(--red); }
+  #gameOverScreen h1 { font-family: 'Press Start 2P', monospace; font-size: 28px; text-shadow: 0 0 20px var(--red); }
+  #gameOverScreen .sub { color: #884444; font-size: 13px; }
+  .overlay button {
+    padding: 12px 32px;
+    font-family: 'Press Start 2P', monospace; font-size: 13px;
+    background: #000; cursor: pointer; border: 2px solid;
+    letter-spacing: 1px; transition: all 0.15s;
+  }
+  #gameOverScreen button { color: var(--red); border-color: var(--red); }
+  #gameOverScreen button:hover { background: var(--red); color: #000; }
+  /* ── LEVEL UP TOAST ── */
+  #levelUpToast {
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+    font-family: 'Press Start 2P', monospace; font-size: 14px;
+    color: var(--gold); text-shadow: 0 0 12px var(--gold);
+    pointer-events: none; z-index: 1000;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  /* ── SCREEN SHAKE ── */
+  @keyframes shake {
+    0%,100%{transform:translate(0,0)} 20%{transform:translate(-4px,3px)} 40%{transform:translate(4px,-3px)}
+    60%{transform:translate(-3px,2px)} 80%{transform:translate(3px,-2px)}
+  }
+  .shaking { animation: shake 0.25s; }
+  /* ── BOSS ALERT ── */
+  #bossAlert {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    font-family: 'Press Start 2P', monospace; font-size: 22px;
+    color: var(--red); text-shadow: 0 0 20px var(--red);
+    pointer-events: none; z-index: 1500;
+    opacity: 0; transition: opacity 0.4s;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<audio id="bgMusic" src="castles.wav" preload="auto" loop></audio>
+<audio id="deadSound" src="dead.wav" preload="auto"></audio>
+<div id="titleScreen">
+  <img src="bossfavicon.png" style="width:80px; height:80px; image-rendering:pixelated; filter: drop-shadow(0 0 12px #88ff88) drop-shadow(0 0 24px #44aa44); animation: flicker 
+4s infinite;" alt="Boss">
+  <pre id="ascii">
+ _______   ____  ____   __    ___       ________    _______   _______       _______    _______     ______    ________
+|   _  "\ ("  _||_ " | |" \  |"  |     |"      "\  /"     "| /"      \     |   _  "\  /"      \   /    " \  /"       )
+(. |_)  :)|   (  ) : | ||  | ||  |     (.  ___  :)(: ______)|:        |    (. |_)  :)|:        | // ____  \(:   \___/
+|:     \/ (:  |  | . ) |:  | |:  |     |: \   ) || \/    |  |_____/   )    |:     \/ |_____/   )/  /    ) :)\___  \
+(|  _  \\  \\ \__/ //  |.  |  \  |___  (| (___\ || // ___)_  //      /     (|  _  \\  //      /(: (____/ //  __/  \\
+|: |_)  :) /\\ __ //\  /\  |\( \_|:  \ |:       :)(:      "||:  __   \     |: |_)  :)|:  __   \ \        /  /" \   :)
+(_______/ (__________)(__\_|_)\_______)(________/  \_______)|__|  \___)    (_______/ |__|  \___) \"_____/  (_______/
+  </pre>
+  <div id="titleText">BOSS EDITION</div>
+  <div id="subtitleText">An infinite world awaits. Survive enemy hordes, build your fortress, and defeat the Boss every 3 minutes.<br></div>
+  <button id="startBtn">▶ START GAME</button>
+  <div id="keyHints">Arrows: Move &nbsp;|&nbsp; T: Iron Wall &nbsp;|&nbsp; Space: ⚡ Lightning &nbsp;|&nbsp; U: Mushroom &nbsp;|&nbsp; G: 🚪 Door &nbsp;|&nbsp; M: Mute</div>
+</div>
+<div id="gameOverScreen" class="overlay">
+  <h1>☠ GAME OVER</h1>
+  <div class="sub" id="finalScore"></div>
+  <button onclick="location.reload()">▶ TRY AGAIN</button>
+</div>
+<div id="bossAlert">⚠ BOSS INCOMING ⚠</div>
+<div id="levelUpToast"></div>
+<div id="hud">
+  <div class="section">
+    <span class="hud-label">HP</span>
+    <div id="hpBar"><div id="hpFill" style="width:100%"></div></div>
+    <span id="hpVal">100</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="section">
+    <span class="hud-label">LVL</span>
+    <span id="levelVal">1</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="section">
+    <span class="hud-label">SCORE</span>
+    <span id="scoreVal">0</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="section" id="rageSection" style="display:none;">
+    <img src="rage_icon.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <div id="rageBar" style="width:80px;height:12px;background:#111;border:1px solid #ff4400;border-radius:2px;overflow:hidden;">
+      <div id="rageFill" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2200,#ff8800);border-radius:2px;transition:width 0.1s;"></div>
+    </div>
+    <span id="rageLabel" style="font-size:11px;color:#ff6600;">READY</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="section" id="purpleSection" style="display:none;">
+    <img src="purple_electric.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <div id="purpleBar" style="width:80px;height:12px;background:#111;border:1px solid #aa44ff;border-radius:2px;overflow:hidden;">
+      <div id="purpleFill" style="height:100%;width:100%;background:linear-gradient(90deg,#7700ff,#cc44ff);border-radius:2px;transition:width 0.1s;"></div>
+    </div>
+    <span id="purpleLabel" style="font-size:11px;color:#cc44ff;">READY</span>
+  </div>
+  <span class="sep" id="purpleSep" style="display:none;">|</span>
+  <div class="section" id="purpleSection" style="display:none;">
+    <img src="purple_electric.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <span id="purpleLabel" style="font-size:11px;color:#cc44ff;">READY</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="section">
+    <span class="hud-label">BOSS</span>
+    <span id="bossTimerVal">3:00</span>
+  </div>
+  <span class="sep" style="margin-left:auto">|</span>
+  <div id="dayCycleWrap" style="display:flex;align-items:center;gap:8px;">
+    <span class="hud-label" id="dayPhaseLbl" style="min-width:44px;text-align:right;font-size:11px;">DAY</span>
+    <canvas id="dayBar" width="160" height="28" style="display:block;"></canvas>
+  </div>
+  <span class="sep">|</span>
+  <button id="pauseBtn" onclick="togglePause(); this.blur();" tabindex="-1" style="
+    font-family:'Press Start 2P',monospace; font-size:11px;
+    background:#000; color:#88ff88; border:1px solid #1a4a1a;
+    padding:4px 12px; cursor:pointer; letter-spacing:1px;
+    transition: all 0.1s;
+  ">⏸ PAUSE</button>
+</div>
+<canvas id="game"></canvas>
+<img id="rageGifEl" src="rage.gif" style="
+  display:none; position:fixed; pointer-events:none; z-index:800;
+  image-rendering:pixelated;
+">
+<img id="purpleGifEl" src="purple_electric.gif" style="
+  display:none; position:fixed; pointer-events:none; z-index:800;
+  image-rendering:pixelated;
+">
+<div id="controls">
+  <span>B=🪨</span><span>Y=🌳</span><span>R=🌵</span><span>U=🍄</span>
+  <span>T=⬛Iron</span><span>G=🚪Door</span><span>H=Lava</span>
+  <span>Space=⚡/😡Rage</span><span>Arrows=Move</span><span>M=Mute</span>
+</div>
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────
+const TILE = 36;
+const BOSS_INTERVAL = 180 * 60; // frames
+const DAY_CYCLE = 60 * 60;      // 60s full cycle
+// ─── STATE ───────────────────────────────────────────────────
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let gameStarted = false;
+let paused = false;
+let frameCount = 0;
+let score = 0;
+let level = 1;
+let xp = 0;
+const XP_PER_LEVEL = 10;
+let dayTime = 0; // 0..1, 0=noon, 0.5=midnight
+let camera = { x: 0, y: 0 };
+let player = { x: 0, y: 0, hp: 100, maxHp: 100, moveDelay: 0, moveSpeed: 10, moveHeld: false, invincible: 0 };
+const keys = {};
+let map = {};
+let enemies = [];
+let spawnPoints = [];
+let projectiles = [];
+let bosses = [];
+let particles = [];
+let bossTimer = BOSS_INTERVAL;
+let shakeTimer = 0;
+let actionCooldown = {};
+let cameraTarget = { x: 0, y: 0 };
+const DEAD_ZONE = TILE * 4;
+const CAM_EASE = 0.08;
+const bossImg = new Image(); bossImg.src = 'boss.png';
+const rageIconImg = new Image(); rageIconImg.src = 'rage_icon.png';
+// ─── RAGE STATE ──────────────────────────────────────────────
+const RAGE_DURATION = 10 * 60;
+const RAGE_PICKUP_SPAWN_INTERVAL = 60 * 60;
+let ragePickups = [];
+let rageTimer = 0;
+let ragePickupSpawn = RAGE_PICKUP_SPAWN_INTERVAL;
+let rageStored = false;
+// ─── PURPLE ELECTRIC STATE ───────────────────────────────────
+const PURPLE_ELEC_DURATION = 3 * 60;
+const PURPLE_ELEC_SPAWN_INTERVAL = 75 * 60;
+let purplePickups = [];
+let purpleTimer = 0;
+let purpleStored = false;
+let purplePickupSpawn = PURPLE_ELEC_SPAWN_INTERVAL;
+const purpleIconImg = new Image(); purpleIconImg.src = 'purple_electric.png';
+// ─── WRENCH STATE ─────────────────────────────────────────────
+const WRENCH_SPAWN_INTERVAL = 75 * 60;
+let wrenchPickups = [];
+let wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
+const wrenchIconImg = new Image(); wrenchIconImg.src = 'wrench.png';
+// ─── DEATH SOUND FLAG ────────────────────────────────────────
+let _deadPlayed = false;
+// ─── RESIZE ──────────────────────────────────────────────────
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener("resize", resize); resize();
+// ─── HELPERS ─────────────────────────────────────────────────
+const k = (x, y) => `${x},${y}`;
+function setTile(x, y, v) { map[k(x, y)] = v; }
+function getTileRaw(x, y) { return map[k(x, y)]; }
+function biome(x, y) {
+  const v = Math.sin(x * 0.01) + Math.cos(y * 0.01);
+  if (v > 1)    return "forest";
+  if (v > 0.3)  return "plains";
+  if (v > -0.3) return "pine";
+  if (v > -1)   return "mushroom";
+  return "desert";
+}
+function getTile(x, y) {
+  const key = k(x, y);
+  if (map.hasOwnProperty(key)) return map[key];
+  const b = biome(x, y);
+  let tile = 0;
+  if (Math.random() < 0.002) {
+    tile = "lava"; spawnPoints.push({ x, y });
+  } else {
+    if      (b === "forest"   && Math.random() < 0.08) tile = "🌳";
+    else if (b === "pine"     && Math.random() < 0.08) tile = "🌲";
+    else if (b === "desert"   && Math.random() < 0.06) tile = "🌵";
+    else if (b === "mushroom" && Math.random() < 0.07) tile = "🍄";
+    else if (Math.random() < 0.04) tile = "🪨";
+  }
+  map[key] = tile;
+  return tile;
+}
+// ─── PARTICLES ───────────────────────────────────────────────
+function spawnParticles(x, y, color, count = 8, speed = 1.5) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const v = (Math.random() + 0.5) * speed;
+    particles.push({
+      x: x * TILE + TILE / 2, y: y * TILE + TILE / 2,
+      vx: Math.cos(angle) * v, vy: Math.sin(angle) * v,
+      life: 30 + Math.random() * 20,
+      maxLife: 50, color, size: 3 + Math.random() * 3
+    });
+  }
+}
+function spawnTextParticle(x, y, text, color = "#ffd700") {
+  particles.push({
+    text, x: x * TILE + TILE / 2, y: y * TILE,
+    vy: -1, life: 50, maxLife: 50, color, isText: true
+  });
+}
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    if (!p.isText) { p.x += p.vx; p.y += p.vy; p.vy += 0.08; }
+    else { p.y += p.vy; }
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    if (p.isText) {
+      ctx.fillStyle = p.color;
+      ctx.font = "bold 14px 'Share Tech Mono'";
+      ctx.textAlign = "center";
+      ctx.fillText(p.text, p.x - camera.x, p.y - camera.y);
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x - camera.x, p.y - camera.y, p.size * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+// ─── STRUCTURES ──────────────────────────────────────────────
+function spawnStructure(type) {
+  let sx = Math.floor(Math.random() * 120) - 60;
+  let sy = Math.floor(Math.random() * 120) - 60;
+  if (Math.abs(sx) < 8 && Math.abs(sy) < 8) return;
+  if (type === "room") {
+    const size = 5 + Math.floor(Math.random() * 3);
+    for (let x = 0; x < size; x++)
+      for (let y = 0; y < size; y++)
+        if (x === 0 || x === size - 1 || y === 0 || y === size - 1)
+          if (!(x === Math.floor(size / 2) && y === 0))
+            setTile(sx + x, sy + y, "iron");
+  } else if (type === "cross") {
+    for (let i = -3; i <= 3; i++) {
+      setTile(sx + i, sy, "🪨");
+      setTile(sx, sy + i, "🪨");
+    }
+  }
+}
+// ─── INPUT ───────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.toLowerCase() === "m") {
+    const music = document.getElementById("bgMusic");
+    const deadSound = document.getElementById("deadSound");
+    const muted = !music.muted;
+    music.muted = muted;
+    deadSound.muted = muted;
+  }
+});
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+  if (["arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase())) {
+    player.moveHeld = false; player.moveDelay = 0;
+  }
+});
+// ─── MOVEMENT ────────────────────────────────────────────────
+function handleMovement() {
+  if (player.hp <= 0) return;
+  let dx = 0, dy = 0;
+  if (keys["arrowleft"])  dx = -1;
+  if (keys["arrowright"]) dx =  1;
+  if (keys["arrowup"])    dy = -1;
+  if (keys["arrowdown"])  dy =  1;
+  if (dx === 0 && dy === 0) { player.moveHeld = false; return; }
+  const nx = player.x + dx, ny = player.y + dy;
+  const nt = getTile(nx, ny);
+  if (nt === "iron" || nt === "🪨") return;
+  if (!player.moveHeld) {
+    player.x += dx; player.y += dy;
+    player.moveHeld = true; player.moveDelay = player.moveSpeed;
+    if (getTile(player.x, player.y) === "lava" && player.invincible <= 0) {
+      player.hp -= 10; player.invincible = 30; shakeTimer = 15;
+    }
+    return;
+  }
+  player.moveDelay--;
+  if (player.moveDelay <= 0) {
+    player.x += dx; player.y += dy; player.moveDelay = 2;
+    if (getTile(player.x, player.y) === "lava" && player.invincible <= 0) {
+      player.hp -= 10; player.invincible = 30; shakeTimer = 15;
+    }
+  }
+}
+// ─── ACTIONS ─────────────────────────────────────────────────
+function handleActions() {
+  if (player.hp <= 0) return;
+  const x = player.x, y = player.y;
+  if (keys["b"]) setTile(x, y, "🪨");
+  if (keys["y"]) setTile(x, y, "🌳");
+  if (keys["r"]) setTile(x, y, "🌵");
+  if (keys["u"]) setTile(x, y, "🍄");
+  if (keys["t"]) setTile(x, y, "iron");
+  if (keys["g"]) setTile(x, y, "door");
+  if (keys["h"]) { setTile(x, y, "lava"); spawnPoints.push({ x, y }); }
+  if (keys["w"] && !actionCooldown["bossSpawn"]) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 12 + Math.floor(Math.random() * 6);
+    const bX = player.x + Math.round(Math.cos(angle) * dist);
+    const bY = player.y + Math.round(Math.sin(angle) * dist);
+    const bHp = 40 + level * 5;
+    bosses.push({ x: bX, y: bY, hp: bHp, maxHp: bHp, timer: 0 });
+    spawnParticles(bX, bY, "#ff0000", 25, 3);
+    spawnParticles(player.x, player.y, "#ff4400", 10, 2);
+    showBossAlert();
+    showToast("😈 BOSS SUMMONED!");
+    shakeTimer = 20;
+    actionCooldown["bossSpawn"] = 120;
+    keys["w"] = false;
+  }
+  if (keys[" "] && !actionCooldown["spaceUsed"]) {
+    if (purpleStored && purpleTimer <= 0 && rageTimer <= 0) {
+      purpleTimer = PURPLE_ELEC_DURATION;
+      purpleStored = false;
+      spawnParticles(player.x, player.y, "#cc44ff", 20, 3);
+      showToast("⚡ PURPLE STORM!");
+    } else if (rageStored && rageTimer <= 0 && purpleTimer <= 0) {
+      rageTimer = RAGE_DURATION;
+      rageStored = false;
+      spawnParticles(player.x, player.y, "#ff4400", 20, 3);
+      showToast("😡 RAGE ACTIVATED!");
+    } else if (rageTimer <= 0 && purpleTimer <= 0) {
+      const dirs = [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
+      for (const [dx, dy] of dirs)
+        projectiles.push({ x: player.x, y: player.y, dx, dy, dist: 0, type: "lightning" });
+      spawnParticles(player.x, player.y, "#88ffff", 12, 2);
+      actionCooldown["lightning"] = 20;
+    }
+    actionCooldown["spaceUsed"] = 15;
+    keys[" "] = false;
+  }
+}
+// ─── ENEMIES ─────────────────────────────────────────────────
+const ENEMY_TYPES = [
+  { emoji: "👻", speed: 30, dmg: 3,  hp: 1, xp: 1, night: false },
+  { emoji: "🧟", speed: 40, dmg: 6,  hp: 2, xp: 2, night: false },
+  { emoji: "🦇", speed: 20, dmg: 4,  hp: 1, xp: 2, night: true  },
+  { emoji: "💀", speed: 25, dmg: 10, hp: 3, xp: 5, night: true  },
+];
+function updateEnemies() {
+  const isNight = dayTime > 0.45 && dayTime < 0.95;
+  const spawnRate = isNight ? 0.06 : 0.025;
+  const maxEnemies = isNight ? 35 + level * 2 : 20 + level;
+  if (enemies.length < maxEnemies && Math.random() < spawnRate && spawnPoints.length > 0) {
+    const s = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+    const pool = isNight ? ENEMY_TYPES : ENEMY_TYPES.filter(e => !e.night);
+    const type = pool[Math.floor(Math.random() * pool.length)];
+    enemies.push({ x: s.x, y: s.y, ...type, timer: 0, curHp: type.hp });
+  }
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    if (player.hp <= 0) continue;
+    e.timer--;
+    if (e.timer <= 0) {
+      e.timer = e.speed;
+      const dx = Math.sign(player.x - e.x), dy = Math.sign(player.y - e.y);
+      let moved = false;
+      for (const [ndx, ndy] of [[dx, dy],[dx, 0],[0, dy]]) {
+        const nx = e.x + ndx, ny = e.y + ndy;
+        const tile = getTile(nx, ny);
+        if (tile === "iron" || tile === "door") continue;
+        if (tile !== 0 && tile !== "lava") setTile(nx, ny, 0);
+        e.x = nx; e.y = ny; moved = true; break;
+      }
+      if (e.x === player.x && e.y === player.y && player.invincible <= 0) {
+        player.hp -= e.dmg;
+        player.invincible = 20;
+        shakeTimer = 10;
+      }
+    }
+  }
+}
+// ─── PURPLE ELECTRIC ─────────────────────────────────────────
+function updatePurple() {
+  purplePickupSpawn--;
+  if (purplePickupSpawn <= 0) {
+    purplePickupSpawn = PURPLE_ELEC_SPAWN_INTERVAL;
+    const count = 1;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 8 + Math.floor(Math.random() * 10);
+      const px = player.x + Math.round(Math.cos(angle) * dist);
+      const py = player.y + Math.round(Math.sin(angle) * dist);
+      if (getTile(px, py) === 0) purplePickups.push({ x: px, y: py, ttl: 20 * 60 });
+    }
+  }
+  for (let i = purplePickups.length - 1; i >= 0; i--) {
+    const p = purplePickups[i];
+    p.ttl--;
+    if (p.ttl <= 0) { purplePickups.splice(i, 1); continue; }
+    if (p.x === player.x && p.y === player.y) {
+      purplePickups.splice(i, 1);
+      purpleStored = true;
+      spawnParticles(player.x, player.y, "#cc44ff", 10, 2);
+      showToast("⚡ PURPLE STORM READY — Press SPACE!");
+    }
+  }
+  if (purpleTimer > 0) {
+    purpleTimer--;
+    if (frameCount % 6 === 0) {
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        spawnParticles(e.x, e.y, "#cc44ff", 5, 1.8);
+        spawnParticles(e.x, e.y, "#ffffff", 2, 1.2);
+        xp += e.xp; score += e.xp * 10;
+        enemies.splice(j, 1);
+        checkLevelUp();
+      }
+    }
+    if (purpleTimer <= 0) {
+      showToast("⚡ Storm faded");
+      document.getElementById("purpleGifEl").style.display = "none";
+      spawnParticles(player.x, player.y, "#aa44ff", 14, 1.5);
+    }
+  }
+}
+// ─── WRENCH PICKUPS ───────────────────────────────────────────
+function updateWrench() {
+  wrenchPickupSpawn--;
+  if (wrenchPickupSpawn <= 0) {
+    wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(px, py) === 0) wrenchPickups.push({ x: px, y: py, ttl: 20 * 60 });
+  }
+  for (let i = wrenchPickups.length - 1; i >= 0; i--) {
+    const w = wrenchPickups[i];
+    w.ttl--;
+    if (w.ttl <= 0) { wrenchPickups.splice(i, 1); continue; }
+    if (w.x === player.x && w.y === player.y) {
+      wrenchPickups.splice(i, 1);
+      const heal = Math.round(player.maxHp * 0.25);
+      player.hp = Math.min(player.hp + heal, player.maxHp);
+      spawnParticles(player.x, player.y, "#44ff88", 12, 2);
+      spawnTextParticle(player.x, player.y - 1, `+${heal} HP`, "#44ff88");
+      showToast(`🔧 REPAIRED! +${heal} HP`);
+    }
+  }
+}
+// ─── RAGE PICKUPS ────────────────────────────────────────────
+function updateRage() {
+  ragePickupSpawn--;
+  if (ragePickupSpawn <= 0) {
+    ragePickupSpawn = RAGE_PICKUP_SPAWN_INTERVAL;
+    const count = 1;
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 8 + Math.floor(Math.random() * 10);
+      const px = player.x + Math.round(Math.cos(angle) * dist);
+      const py = player.y + Math.round(Math.sin(angle) * dist);
+      const t = getTile(px, py);
+      if (t === 0) ragePickups.push({ x: px, y: py, ttl: 20 * 60 });
+    }
+  }
+  for (let i = ragePickups.length - 1; i >= 0; i--) {
+    const p = ragePickups[i];
+    p.ttl--;
+    if (p.ttl <= 0) { ragePickups.splice(i, 1); continue; }
+    if (p.x === player.x && p.y === player.y) {
+      ragePickups.splice(i, 1);
+      rageStored = true;
+      spawnParticles(player.x, player.y, "#ff6600", 10, 2);
+      showToast("😡 RAGE READY — Press SPACE!");
+    }
+  }
+  if (rageTimer > 0) {
+    rageTimer--;
+    if (frameCount % 4 === 0) {
+      for (let ox = -2; ox <= 2; ox++) {
+        for (let oy = -2; oy <= 2; oy++) {
+          const tx = player.x + ox, ty = player.y + oy;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            if (enemies[j].x === tx && enemies[j].y === ty) {
+              spawnParticles(tx, ty, "#ff2200", 5);
+              xp += enemies[j].xp; score += enemies[j].xp * 10;
+              enemies.splice(j, 1);
+              checkLevelUp();
+            }
+          }
+          for (let j = bosses.length - 1; j >= 0; j--) {
+            if (Math.abs(bosses[j].x - tx) <= 1 && Math.abs(bosses[j].y - ty) <= 1) {
+              bosses[j].hp -= 2;
+              if (frameCount % 20 === 0) spawnParticles(bosses[j].x, bosses[j].y, "#ff2200", 4);
+            }
+          }
+          const t = getTile(tx, ty);
+          if (t !== 0 && t !== "lava") setTile(tx, ty, 0);
+        }
+      }
+      spawnParticles(player.x, player.y, "#ff4400", 6, 2.5);
+    }
+    if (rageTimer <= 0) {
+      showToast("😤 Rage over");
+      spawnParticles(player.x, player.y, "#ffaa00", 12, 1.5);
+    }
+  }
+}
+function updateProjectiles() {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.x += p.dx; p.y += p.dy; p.dist++;
+    let hit = false;
+    for (let j = enemies.length - 1; j >= 0; j--) {
+      if (enemies[j].x === Math.round(p.x) && enemies[j].y === Math.round(p.y)) {
+        enemies[j].curHp--;
+        if (enemies[j].curHp <= 0) {
+          spawnParticles(enemies[j].x, enemies[j].y, "#ff8800", 6);
+          spawnTextParticle(enemies[j].x, enemies[j].y, `+${enemies[j].xp}XP`);
+          xp += enemies[j].xp; score += enemies[j].xp * 10;
+          enemies.splice(j, 1);
+          checkLevelUp();
+        }
+        hit = true; break;
+      }
+    }
+    if (!hit) {
+      for (let j = bosses.length - 1; j >= 0; j--) {
+        if (Math.abs(p.x - bosses[j].x) <= 1 && Math.abs(p.y - bosses[j].y) <= 1) {
+          bosses[j].hp -= 5; hit = true;
+          spawnParticles(bosses[j].x, bosses[j].y, "#ff4444", 4, 1);
+          spawnTextParticle(bosses[j].x, bosses[j].y - 1, "-5", "#ff4444");
+          break;
+        }
+      }
+    }
+    if (hit || p.dist > 30) projectiles.splice(i, 1);
+  }
+}
+// ─── LEVEL UP ────────────────────────────────────────────────
+function checkLevelUp() {
+  if (level >= 15) return;
+  if (xp >= XP_PER_LEVEL * level) {
+    level++;
+    player.maxHp = Math.min(player.maxHp + 3, 150);
+    player.hp = Math.min(player.hp + 5, player.maxHp);
+    if (level === 15) {
+      showToast("🏆 MAX LEVEL! HP 150");
+    } else {
+      showToast(`⬆ LEVEL ${level}! +5 HP`);
+    }
+  }
+}
+function showToast(msg) {
+  const t = document.getElementById("levelUpToast");
+  t.textContent = msg;
+  t.style.opacity = "1";
+  setTimeout(() => { t.style.opacity = "0"; }, 2000);
+}
+// ─── BOSS ─────────────────────────────────────────────────────
+function updateBosses() {
+  if (bossTimer > 0) {
+    bossTimer--;
+    if (bossTimer === 180) showBossAlert();
+  } else {
+    const bX = player.x + (Math.random() > 0.5 ? 18 : -18);
+    const bY = player.y + (Math.random() > 0.5 ? 18 : -18);
+    bosses.push({ x: bX, y: bY, hp: 40 + level * 5, maxHp: 40 + level * 5, timer: 0 });
+    bossTimer = BOSS_INTERVAL;
+  }
+  for (let i = bosses.length - 1; i >= 0; i--) {
+    const b = bosses[i];
+    b.timer--;
+    if (b.timer <= 0) {
+      b.timer = Math.max(15, 35 - level * 2);
+      const dx = Math.sign(player.x - b.x), dy = Math.sign(player.y - b.y);
+      let moved = false;
+      for (const [bdx, bdy] of [[dx, dy],[dx, 0],[0, dy]]) {
+        const nx = b.x + bdx, ny = b.y + bdy;
+        const nt = getTile(nx, ny);
+        if (nt === "door") continue;
+        b.x = nx; b.y = ny; moved = true; break;
+      }
+      if (getTile(b.x, b.y) === "🍄") {
+        b.hp -= 15;
+        setTile(b.x, b.y, 0);
+        spawnParticles(b.x, b.y, "#aa44ff", 8);
+        spawnTextParticle(b.x, b.y - 1, "-15", "#aa44ff");
+      }
+      for (let ox = -1; ox <= 1; ox++)
+        for (let oy = -1; oy <= 1; oy++) {
+          const t = getTile(b.x + ox, b.y + oy);
+          if (t !== 0 && t !== "lava") setTile(b.x + ox, b.y + oy, 0);
+        }
+    }
+    if (Math.abs(b.x - player.x) <= 1 && Math.abs(b.y - player.y) <= 1 && player.invincible <= 0) {
+      player.hp -= 15;
+      player.invincible = 40;
+      shakeTimer = 20;
+      player.x -= Math.sign(player.x - b.x) * 2;
+      player.y -= Math.sign(player.y - b.y) * 2;
+    }
+    if (b.hp <= 0) {
+      spawnParticles(b.x, b.y, "#ffd700", 30, 3);
+      spawnTextParticle(b.x, b.y - 2, "BOSS DEFEATED!", "#ffd700");
+      score += 500 + level * 100;
+      xp += 25;
+      bosses.splice(i, 1);
+      checkLevelUp();
+      showToast("🏆 BOSS SLAIN! +500 SCORE");
+    }
+  }
+}
+function showBossAlert() {
+  const el = document.getElementById("bossAlert");
+  el.style.opacity = "1";
+  setTimeout(() => { el.style.opacity = "0"; }, 3000);
+}
+// ─── DAY/NIGHT ────────────────────────────────────────────────
+function updateDayNight() {
+  dayTime = (dayTime + 1 / DAY_CYCLE) % 1;
+}
+function getDayNightOverlay() {
+  const t = dayTime;
+  let darkness;
+  if (t < 0.4)      darkness = 0;
+  else if (t < 0.5) darkness = (t - 0.4) / 0.1 * 0.75;
+  else if (t < 0.9) darkness = 0.75;
+  else              darkness = (1 - t) / 0.1 * 0.75;
+  return darkness;
+}
+function getDayLabel() {
+  const t = dayTime;
+  if (t < 0.4)      return { emoji: "☀", text: "DAY",   color: "#ffdd44" };
+  if (t < 0.5)      return { emoji: "🌅", text: "DUSK",  color: "#ff8844" };
+  if (t < 0.9)      return { emoji: "🌙", text: "NIGHT", color: "#8888ff" };
+  return             { emoji: "🌄", text: "DAWN",  color: "#ffaa44" };
+}
+function drawDayBar() {
+  const bc = document.getElementById("dayBar");
+  const bx = bc.getContext("2d");
+  const W = bc.width, H = bc.height;
+  bx.clearRect(0, 0, W, H);
+  const trackY = H / 2, trackH = 6, trackR = 3;
+  const trackX = 14, trackW = W - 28;
+  bx.fillStyle = "#0a0a1a";
+  bx.beginPath();
+  bx.roundRect(trackX, trackY - trackH/2, trackW, trackH, trackR);
+  bx.fill();
+  const grad = bx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+  grad.addColorStop(0,    "#ffdd44");
+  grad.addColorStop(0.4,  "#ffcc00");
+  grad.addColorStop(0.45, "#ff6622");
+  grad.addColorStop(0.5,  "#220066");
+  grad.addColorStop(0.9,  "#110044");
+  grad.addColorStop(1,    "#ff9944");
+  bx.fillStyle = grad;
+  bx.beginPath();
+  bx.roundRect(trackX, trackY - trackH/2, trackW, trackH, trackR);
+  bx.fill();
+  const indicX = trackX + dayTime * trackW;
+  const isNight = dayTime > 0.45 && dayTime < 0.95;
+  const glowColor = isNight ? "#8888ff" : "#ffdd44";
+  bx.shadowColor = glowColor;
+  bx.shadowBlur = 8;
+  bx.beginPath();
+  bx.arc(indicX, trackY, 7, 0, Math.PI * 2);
+  bx.fillStyle = isNight ? "#222255" : "#000";
+  bx.fill();
+  bx.strokeStyle = glowColor;
+  bx.lineWidth = 2;
+  bx.stroke();
+  bx.shadowBlur = 0;
+  bx.font = "9px serif";
+  bx.textAlign = "center";
+  bx.textBaseline = "middle";
+  bx.fillText(isNight ? "🌙" : "☀", indicX, trackY);
+  const ticks = [0.4, 0.5, 0.9];
+  for (const tick of ticks) {
+    const tx = trackX + tick * trackW;
+    bx.strokeStyle = "#ffffff22";
+    bx.lineWidth = 1;
+    bx.beginPath();
+    bx.moveTo(tx, trackY - trackH/2 - 2);
+    bx.lineTo(tx, trackY + trackH/2 + 2);
+    bx.stroke();
+  }
+  bx.font = "10px serif";
+  bx.textAlign = "center"; bx.textBaseline = "middle";
+  bx.globalAlpha = 0.7;
+  bx.fillText("☀", trackX - 8, trackY);
+  bx.fillText("🌙", trackX + trackW + 8, trackY);
+  bx.globalAlpha = 1;
+}
+// ─── DRAW ────────────────────────────────────────────────────
+function drawBossHealth(b) {
+  const barW = TILE * 3;
+  const barH = 10;
+  const px = (b.x) * TILE - camera.x + TILE / 2 - barW / 2;
+  const py = (b.y - 1) * TILE - camera.y - 20;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(px - 1, py - 1, barW + 2, barH + 2);
+  const pct = Math.max(0, b.hp / b.maxHp);
+  ctx.fillStyle = pct > 0.5 ? "#00ff44" : pct > 0.25 ? "#ffaa00" : "#ff2200";
+  ctx.fillRect(px, py, barW * pct, barH);
+  ctx.strokeStyle = "#ffffff44";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px, py, barW, barH);
+  ctx.font = "10px 'Share Tech Mono'"; ctx.textAlign = "center"; ctx.fillStyle = "#fff";
+  ctx.fillText(`BOSS ${Math.ceil(b.hp)}/${b.maxHp}`, px + barW / 2, py - 4);
+}
+function draw() {
+  let shakeX = 0, shakeY = 0;
+  if (shakeTimer > 0) {
+    shakeX = (Math.random() - 0.5) * 8;
+    shakeY = (Math.random() - 0.5) * 8;
+    shakeTimer--;
+  }
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const playerScreenX = player.x * TILE - camera.x;
+  const playerScreenY = player.y * TILE - camera.y;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  if (playerScreenX < centerX - DEAD_ZONE) cameraTarget.x = player.x * TILE - (centerX - DEAD_ZONE);
+  if (playerScreenX > centerX + DEAD_ZONE) cameraTarget.x = player.x * TILE - (centerX + DEAD_ZONE);
+  if (playerScreenY < centerY - DEAD_ZONE) cameraTarget.y = player.y * TILE - (centerY - DEAD_ZONE);
+  if (playerScreenY > centerY + DEAD_ZONE) cameraTarget.y = player.y * TILE - (centerY + DEAD_ZONE);
+  camera.x += (cameraTarget.x - camera.x) * CAM_EASE + shakeX;
+  camera.y += (cameraTarget.y - camera.y) * CAM_EASE + shakeY;
+  const sx = Math.floor(camera.x / TILE) - 1;
+  const sy = Math.floor(camera.y / TILE) - 1;
+  const ex = sx + Math.ceil(canvas.width / TILE) + 2;
+  const ey = sy + Math.ceil(canvas.height / TILE) + 2;
+  const darkness = getDayNightOverlay();
+  ctx.strokeStyle = darkness > 0.5 ? "#0a1a0a" : "#111";
+  ctx.lineWidth = 0.5;
+  for (let gx = sx; gx < ex; gx++) {
+    const px = gx * TILE - camera.x;
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, canvas.height); ctx.stroke();
+  }
+  for (let gy = sy; gy < ey; gy++) {
+    const py = gy * TILE - camera.y;
+    ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(canvas.width, py); ctx.stroke();
+  }
+  ctx.font = TILE + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (let y = sy; y < ey; y++) {
+    for (let x = sx; x < ex; x++) {
+      const t = getTile(x, y);
+      const px = x * TILE - camera.x + TILE / 2;
+      const py = y * TILE - camera.y + TILE / 2;
+      if (t === "lava") {
+        const flicker = 0.8 + 0.2 * Math.sin(frameCount * 0.1 + x + y);
+        ctx.fillStyle = `rgba(255,${Math.floor(60 * flicker)},0,1)`;
+        ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        const grad = ctx.createRadialGradient(px, py, 0, px, py, TILE);
+        grad.addColorStop(0, `rgba(255,100,0,${0.3 * flicker})`);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.fillRect(x * TILE - camera.x - TILE, y * TILE - camera.y - TILE, TILE * 3, TILE * 3);
+      } else if (t === "iron") {
+        ctx.fillStyle = "#334";
+        ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        ctx.strokeStyle = "#556";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x * TILE - camera.x + 2, y * TILE - camera.y + 2, TILE - 4, TILE - 4);
+      } else if (t === "door") {
+        ctx.fillStyle = "#5a3010";
+        ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        ctx.fillStyle = "#7a4820";
+        const bx2 = x * TILE - camera.x, by2 = y * TILE - camera.y;
+        ctx.fillRect(bx2 + 4, by2 + 2, (TILE-8)/2 - 1, TILE - 4);
+        ctx.fillRect(bx2 + 4 + (TILE-8)/2 + 2, by2 + 2, (TILE-8)/2 - 1, TILE - 4);
+        ctx.fillStyle = "#ffd700";
+        ctx.beginPath();
+        ctx.arc(bx2 + TILE * 0.65, by2 + TILE * 0.55, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#3a1a00";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx2 + 2, by2 + 2, TILE - 4, TILE - 4);
+      } else if (typeof t === "string") {
+        ctx.fillText(t, px, py);
+      }
+    }
+  }
+  // Rage pickups
+  for (const rp of ragePickups) {
+    const rpx = rp.x * TILE - camera.x;
+    const rpy = rp.y * TILE - camera.y;
+    const expiring = rp.ttl < 3 * 60;
+    const pulse = expiring
+      ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1)
+      : 0.7 + 0.3 * Math.sin(frameCount * 0.12);
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 14 * pulse;
+    if (rageIconImg.complete && rageIconImg.naturalWidth > 0) {
+      ctx.drawImage(rageIconImg, rpx + 2, rpy + 2, TILE - 4, TILE - 4);
+    } else {
+      ctx.font = (TILE * 0.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("😡", rpx + TILE/2, rpy + TILE/2);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+  // Purple electric pickups
+  for (const pp of purplePickups) {
+    const ppx = pp.x * TILE - camera.x;
+    const ppy = pp.y * TILE - camera.y;
+    const expiring = pp.ttl < 3 * 60;
+    const pulse = expiring
+      ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1)
+      : 0.7 + 0.3 * Math.sin(frameCount * 0.15);
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#cc44ff"; ctx.shadowBlur = 14 * pulse;
+    if (purpleIconImg.complete && purpleIconImg.naturalWidth > 0) {
+      ctx.drawImage(purpleIconImg, ppx + 2, ppy + 2, TILE - 4, TILE - 4);
+    } else {
+      ctx.font = (TILE * 0.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("⚡", ppx + TILE/2, ppy + TILE/2);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+  // Wrench pickups
+  for (const wp of wrenchPickups) {
+    const wpx = wp.x * TILE - camera.x;
+    const wpy = wp.y * TILE - camera.y;
+    const expiring = wp.ttl < 3 * 60;
+    const pulse = expiring
+      ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1)
+      : 0.7 + 0.3 * Math.sin(frameCount * 0.13);
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#44ff88"; ctx.shadowBlur = 14 * pulse;
+    if (wrenchIconImg.complete && wrenchIconImg.naturalWidth > 0) {
+      ctx.drawImage(wrenchIconImg, wpx + 2, wpy + 2, TILE - 4, TILE - 4);
+    } else {
+      ctx.font = (TILE * 0.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("🔧", wpx + TILE/2, wpy + TILE/2);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+  // Enemies
+  ctx.font = TILE * 0.8 + "px serif";
+  for (const e of enemies) {
+    const px = e.x * TILE + TILE / 2 - camera.x;
+    const py = e.y * TILE + TILE / 2 - camera.y;
+    if (e.night && darkness > 0.3) {
+      ctx.shadowColor = "#ff0000"; ctx.shadowBlur = 8;
+    }
+    ctx.fillText(e.emoji, px, py);
+    ctx.shadowBlur = 0;
+  }
+  // Projectiles
+  ctx.font = TILE * 0.7 + "px serif";
+  for (const p of projectiles) {
+    ctx.shadowColor = "#88ffff"; ctx.shadowBlur = 10;
+    ctx.fillText("⚡", p.x * TILE + TILE / 2 - camera.x, p.y * TILE + TILE / 2 - camera.y);
+  }
+  ctx.shadowBlur = 0;
+  // Bosses
+  for (const b of bosses) {
+    const bossSize = TILE * 3;
+    if (bossImg.complete && bossImg.naturalWidth > 0) {
+      ctx.drawImage(bossImg, (b.x - 1) * TILE - camera.x, (b.y - 1) * TILE - camera.y, bossSize, bossSize);
+    } else {
+      ctx.font = bossSize + "px serif";
+      ctx.fillText("👹", b.x * TILE + TILE / 2 - camera.x, b.y * TILE + TILE / 2 - camera.y);
+    }
+    drawBossHealth(b);
+  }
+  // Player
+  const rageEl = document.getElementById("rageGifEl");
+  const purpleEl = document.getElementById("purpleGifEl");
+  if (purpleTimer > 0) {
+    const vAlpha = 0.1 + 0.07 * Math.sin(frameCount * 0.25);
+    ctx.fillStyle = `rgba(100,0,200,${vAlpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (frameCount % 3 === 0) {
+      ctx.strokeStyle = `rgba(180,80,255,${0.3 + 0.2 * Math.random()})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const ex = Math.random() * canvas.width, ey = Math.random() * canvas.height;
+      ctx.moveTo(player.x * TILE + TILE/2 - camera.x, player.y * TILE + TILE/2 - camera.y);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
+    }
+    const purpleSize = TILE * 2;
+    const ppx2 = player.x * TILE + TILE/2 - camera.x - purpleSize/2;
+    const ppy2 = player.y * TILE + TILE/2 - camera.y - purpleSize/2;
+    purpleEl.style.display = "block";
+    purpleEl.style.left = Math.round(ppx2) + "px";
+    purpleEl.style.top = Math.round(ppy2) + "px";
+    purpleEl.style.width = purpleSize + "px";
+    purpleEl.style.height = purpleSize + "px";
+    purpleEl.style.filter = `drop-shadow(0 0 ${8 + 5 * Math.sin(frameCount * 0.2)}px #cc44ff)`;
+  } else {
+    purpleEl.style.display = "none";
+  }
+  if (rageTimer > 0) {
+    const rageSize = TILE * 2;
+    const rpx = player.x * TILE + TILE/2 - camera.x - rageSize/2;
+    const rpy = player.y * TILE + TILE/2 - camera.y - rageSize/2;
+    const vAlpha = 0.12 + 0.08 * Math.sin(frameCount * 0.2);
+    ctx.fillStyle = `rgba(255,30,0,${vAlpha})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    rageEl.style.display = "block";
+    rageEl.style.left = Math.round(rpx) + "px";
+    rageEl.style.top = Math.round(rpy) + "px";
+    rageEl.style.width = rageSize + "px";
+    rageEl.style.height = rageSize + "px";
+    rageEl.style.filter = `drop-shadow(0 0 ${10 + 6 * Math.sin(frameCount * 0.15)}px #ff2200)`;
+  } else {
+    rageEl.style.display = "none";
+    if (purpleTimer <= 0) {
+      ctx.font = TILE + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (player.invincible > 0 && Math.floor(frameCount / 3) % 2 === 0) ctx.globalAlpha = 0.4;
+      ctx.fillText(player.hp > 0 ? "🤖" : "☠️", player.x * TILE + TILE/2 - camera.x, player.y * TILE + TILE/2 - camera.y);
+      ctx.globalAlpha = 1;
+    }
+  }
+  // Particles
+  drawParticles();
+  // Day/Night overlay
+  if (darkness > 0) {
+    ctx.fillStyle = `rgba(0,5,30,${darkness})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (darkness > 0.4) {
+      ctx.fillStyle = `rgba(255,255,255,${(darkness - 0.4) * 2})`;
+      for (let s = 0; s < 80; s++) {
+        const sx2 = ((s * 173 + frameCount * 0.5) % canvas.width);
+        const sy2 = ((s * 97) % (canvas.height * 0.6));
+        const twinkle = 0.5 + 0.5 * Math.sin(frameCount * 0.05 + s);
+        ctx.globalAlpha = twinkle * (darkness - 0.4) * 2;
+        ctx.fillRect(sx2, sy2, 1.5, 1.5);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+  // HUD Update
+  const hpPct = Math.max(0, player.hp / player.maxHp * 100);
+  document.getElementById("hpFill").style.width = hpPct + "%";
+  document.getElementById("hpVal").textContent = Math.ceil(player.hp);
+  document.getElementById("scoreVal").textContent = score;
+  document.getElementById("levelVal").textContent = level;
+  const sec = Math.ceil(bossTimer / 60);
+  document.getElementById("bossTimerVal").textContent =
+    `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, "0")}`;
+  const dl = getDayLabel();
+  document.getElementById("dayPhaseLbl").textContent = dl.text;
+  document.getElementById("dayPhaseLbl").style.color = dl.color;
+  drawDayBar();
+  // Rage HUD
+  const rageSection = document.getElementById("rageSection");
+  if (rageStored || rageTimer > 0) {
+    rageSection.style.display = "flex";
+    const rageFill = document.getElementById("rageFill");
+    const rageLabel = document.getElementById("rageLabel");
+    if (rageTimer > 0) {
+      const pct = rageTimer / RAGE_DURATION * 100;
+      rageFill.style.width = pct + "%";
+      rageFill.style.background = "linear-gradient(90deg,#ff2200,#ff8800)";
+      rageLabel.textContent = Math.ceil(rageTimer / 60) + "s";
+      rageLabel.style.color = "#ff4400";
+    } else {
+      rageFill.style.width = "100%";
+      rageFill.style.background = "linear-gradient(90deg,#ff6600,#ffcc00)";
+      rageLabel.textContent = "READY";
+      rageLabel.style.color = "#ffcc00";
+    }
+  } else {
+    rageSection.style.display = "none";
+  }
+  // Purple HUD
+  const purpleSection = document.getElementById("purpleSection");
+  if (purpleStored || purpleTimer > 0) {
+    purpleSection.style.display = "flex";
+    const purpleFill = document.getElementById("purpleFill");
+    const purpleLabel = document.getElementById("purpleLabel");
+    if (purpleTimer > 0) {
+      purpleFill.style.width = (purpleTimer / PURPLE_ELEC_DURATION * 100) + "%";
+      purpleLabel.textContent = Math.ceil(purpleTimer / 60) + "s";
+      purpleLabel.style.color = "#cc44ff";
+    } else {
+      purpleFill.style.width = "100%";
+      purpleLabel.textContent = "READY";
+      purpleLabel.style.color = "#dd88ff";
+    }
+  } else {
+    purpleSection.style.display = "none";
+  }
+  if (paused) {
+    document.getElementById("rageGifEl").style.display = "none";
+    document.getElementById("purpleGifEl").style.display = "none";
+    drawPauseOverlay();
+  }
+  // ── DEATH CHECK ──────────────────────────────────────────────
+  if (player.hp <= 0) {
+    document.getElementById("rageGifEl").style.display = "none";
+    document.getElementById("purpleGifEl").style.display = "none";
+    if (!_deadPlayed) {
+      _deadPlayed = true;
+      // Stop all music
+      const bgMusic = document.getElementById("bgMusic");
+      bgMusic.pause();
+      // Play death sound once
+      const deadSound = document.getElementById("deadSound");
+      deadSound.volume = 0.8;
+      deadSound.currentTime = 0;
+      deadSound.play().catch(() => {});
+    }
+    document.getElementById("finalScore").textContent = `Score: ${score} | Level: ${level}`;
+    document.getElementById("gameOverScreen").style.display = "flex";
+  }
+}
+// ─── COOLDOWNS ───────────────────────────────────────────────
+function updateCooldowns() {
+  for (const k in actionCooldown) {
+    actionCooldown[k]--;
+    if (actionCooldown[k] <= 0) delete actionCooldown[k];
+  }
+  if (player.invincible > 0) player.invincible--;
+}
+// ─── PAUSE ───────────────────────────────────────────────────
+function togglePause() {
+  paused = !paused;
+  const btn = document.getElementById("pauseBtn");
+  const music = document.getElementById("bgMusic");
+  if (paused) {
+    btn.textContent = "▶ RESUME";
+    btn.style.color = "#ffd700";
+    btn.style.borderColor = "#ffd700";
+    music.pause();
+  } else {
+    btn.textContent = "⏸ PAUSE";
+    btn.style.color = "#88ff88";
+    btn.style.borderColor = "#1a4a1a";
+    music.play().catch(() => {});
+    loop();
+  }
+}
+function drawPauseOverlay() {
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "bold 28px 'Press Start 2P', monospace";
+  ctx.fillStyle = "#ffd700";
+  ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 20;
+  ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 16);
+  ctx.shadowBlur = 0;
+  ctx.font = "12px 'Share Tech Mono', monospace";
+  ctx.fillStyle = "#448844";
+  ctx.fillText("click RESUME or press P to continue", canvas.width / 2, canvas.height / 2 + 22);
+}
+// ─── MAIN LOOP ───────────────────────────────────────────────
+function loop() {
+  if (!gameStarted || paused) return;
+  frameCount++;
+  handleMovement();
+  handleActions();
+  updateEnemies();
+  updateBosses();
+  updateProjectiles();
+  updateRage();
+  updatePurple();
+  updateWrench();
+  updateParticles();
+  updateDayNight();
+  updateCooldowns();
+  draw();
+  requestAnimationFrame(loop);
+}
+// ─── START ───────────────────────────────────────────────────
+function startGame() {
+  _deadPlayed = false;
+  document.getElementById("titleScreen").style.display = "none";
+  for (let i = 0; i < 15; i++) spawnStructure("room");
+  for (let i = 0; i < 10; i++) spawnStructure("cross");
+  for (let x = -12; x <= 12; x++)
+    for (let y = -12; y <= 12; y++) getTile(x, y);
+  const music = document.getElementById("bgMusic");
+  music.volume = 0.3;
+  music.play().catch(() => {});
+  gameStarted = true;
+  loop();
+}
+document.getElementById("startBtn").onclick = startGame;
+</script>
+</body>
+</html>
