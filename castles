@@ -271,6 +271,18 @@ let wrenchPickups = [];
 let wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
 const wrenchIconImg = new Image(); wrenchIconImg.src = 'wrench.png';
 
+// ─── DEMON STATE ─────────────────────────────────────────────
+const DEMON_SPAWN_INTERVAL = 45 * 60; // spawn a demon every 45s
+const DEMON_MAX = 3;                   // max demons on screen
+const DEMON_HP = 20;
+const DEMON_FLEE_RADIUS = 4;           // tiles — poof if player gets this close
+const DEMON_SHOOT_RATE = 90;           // frames between fireballs
+let demons = [];
+let demonSpawnTimer = DEMON_SPAWN_INTERVAL;
+const demonImg = new Image(); demonImg.src = 'demon.png';
+const fireballImg = new Image(); fireballImg.src = 'fireball.png';
+let fireballs = [];                    // { x, y, dx, dy, dist }
+
 let _deadPlayed = false;
 
 function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
@@ -623,6 +635,98 @@ function updateRage() {
   }
 }
 
+// ─── DEMONS ──────────────────────────────────────────────────
+function spawnDemonAt(x, y) {
+  demons.push({ x, y, hp: DEMON_HP, maxHp: DEMON_HP, shootTimer: DEMON_SHOOT_RATE });
+}
+
+function teleportDemon(d) {
+  // Pick a random spot 10-20 tiles from player, not too close
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 10 + Math.floor(Math.random() * 10);
+    const nx = player.x + Math.round(Math.cos(angle) * dist);
+    const ny = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(nx, ny) === 0) {
+      d.x = nx; d.y = ny;
+      spawnParticles(nx, ny, "#ff6600", 10, 2);
+      return;
+    }
+  }
+}
+
+function updateDemons() {
+  // Spawn new demons periodically
+  demonSpawnTimer--;
+  if (demonSpawnTimer <= 0) {
+    demonSpawnTimer = DEMON_SPAWN_INTERVAL;
+    if (demons.length < DEMON_MAX) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 12 + Math.floor(Math.random() * 8);
+      const sx = player.x + Math.round(Math.cos(angle) * dist);
+      const sy = player.y + Math.round(Math.sin(angle) * dist);
+      spawnDemonAt(sx, sy);
+      spawnParticles(sx, sy, "#ff4400", 14, 2.5);
+    }
+  }
+
+  for (let i = demons.length - 1; i >= 0; i--) {
+    const d = demons[i];
+
+    // Flee if player too close — poof and reappear elsewhere
+    const distToPlayer = Math.abs(d.x - player.x) + Math.abs(d.y - player.y);
+    if (distToPlayer <= DEMON_FLEE_RADIUS) {
+      spawnParticles(d.x, d.y, "#880000", 12, 2);
+      teleportDemon(d);
+      continue;
+    }
+
+    // Shoot fireball toward player
+    d.shootTimer--;
+    if (d.shootTimer <= 0) {
+      d.shootTimer = DEMON_SHOOT_RATE;
+      const ddx = player.x - d.x, ddy = player.y - d.y;
+      const len = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+      fireballs.push({
+        x: d.x, y: d.y,
+        dx: ddx / len * 0.18,
+        dy: ddy / len * 0.18,
+        dist: 0
+      });
+    }
+
+    // Remove if dead
+    if (d.hp <= 0) {
+      spawnParticles(d.x, d.y, "#ff4400", 20, 3);
+      spawnParticles(d.x, d.y, "#ffd700", 10, 2);
+      spawnTextParticle(d.x, d.y - 1, "DEMON SLAIN!", "#ff6600");
+      score += 300 + level * 50;
+      xp += 8;
+      demons.splice(i, 1);
+      checkLevelUp();
+    }
+  }
+
+  // Update fireballs
+  for (let i = fireballs.length - 1; i >= 0; i--) {
+    const f = fireballs[i];
+    f.x += f.dx; f.y += f.dy; f.dist += Math.sqrt(f.dx * f.dx + f.dy * f.dy);
+
+    // Hit player
+    if (Math.abs(f.x - player.x) < 0.6 && Math.abs(f.y - player.y) < 0.6 && player.invincible <= 0) {
+      player.hp -= 12;
+      player.invincible = 30;
+      shakeTimer = 12;
+      spawnParticles(player.x, player.y, "#ff4400", 8, 1.5);
+      fireballs.splice(i, 1);
+      continue;
+    }
+
+    // Remove if out of range
+    if (f.dist > 25) fireballs.splice(i, 1);
+  }
+}
+
 function updateProjectiles() {
   for (let i = projectiles.length - 1; i >= 0; i--) {
     const p = projectiles[i];
@@ -647,6 +751,17 @@ function updateProjectiles() {
           bosses[j].hp -= 5; hit = true;
           spawnParticles(bosses[j].x, bosses[j].y, "#ff4444", 4, 1);
           spawnTextParticle(bosses[j].x, bosses[j].y - 1, "-5", "#ff4444");
+          break;
+        }
+      }
+    }
+    // Only lightning damages demons
+    if (!hit) {
+      for (let j = demons.length - 1; j >= 0; j--) {
+        if (Math.abs(p.x - demons[j].x) <= 1 && Math.abs(p.y - demons[j].y) <= 1) {
+          demons[j].hp -= 5; hit = true;
+          spawnParticles(demons[j].x, demons[j].y, "#88ffff", 5, 1.5);
+          spawnTextParticle(demons[j].x, demons[j].y - 1, "-5", "#88ffff");
           break;
         }
       }
@@ -927,6 +1042,53 @@ function draw() {
   }
   ctx.shadowBlur = 0;
 
+  // Fireballs
+  for (const f of fireballs) {
+    const fpx = f.x * TILE + TILE / 2 - camera.x;
+    const fpy = f.y * TILE + TILE / 2 - camera.y;
+    const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.3);
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 28;
+    if (fireballImg.complete && fireballImg.naturalWidth > 0) {
+      const fsz = TILE * 3;
+      ctx.drawImage(fireballImg, fpx - fsz/2, fpy - fsz/2, fsz, fsz);
+    } else {
+      ctx.font = (TILE * 2.8) + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("🔥", fpx, fpy);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // Demons
+  for (const d of demons) {
+    const dSize = TILE * 4;
+    const dpx = d.x * TILE + TILE/2 - camera.x - dSize/2;
+    const dpy = d.y * TILE + TILE/2 - camera.y - dSize/2;
+    const bob = Math.sin(frameCount * 0.07 + d.x) * 5;
+    ctx.shadowColor = "#ff2200"; ctx.shadowBlur = 16 + 8 * Math.sin(frameCount * 0.1);
+    if (demonImg.complete && demonImg.naturalWidth > 0) {
+      ctx.drawImage(demonImg, dpx, dpy + bob, dSize, dSize);
+    } else {
+      ctx.font = dSize + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("👿", d.x * TILE + TILE/2 - camera.x, d.y * TILE + TILE/2 - camera.y + bob);
+    }
+    ctx.shadowBlur = 0;
+    // Demon health bar
+    const barW = TILE * 3, barH = 8;
+    const bpx = d.x * TILE - camera.x + TILE/2 - barW/2;
+    const bpy = d.y * TILE - camera.y - dSize/2 - 18 + bob;
+    ctx.fillStyle = "#000"; ctx.fillRect(bpx - 1, bpy - 1, barW + 2, barH + 2);
+    const pct = Math.max(0, d.hp / d.maxHp);
+    ctx.fillStyle = pct > 0.5 ? "#ff4400" : pct > 0.25 ? "#ff8800" : "#ffff00";
+    ctx.fillRect(bpx, bpy, barW * pct, barH);
+    ctx.strokeStyle = "#ffffff44"; ctx.lineWidth = 1;
+    ctx.strokeRect(bpx, bpy, barW, barH);
+    ctx.font = "9px 'Share Tech Mono'"; ctx.textAlign = "center"; ctx.fillStyle = "#fff";
+    ctx.fillText(`DEMON ${Math.ceil(d.hp)}/${d.maxHp}`, bpx + barW/2, bpy - 4);
+  }
+
   // ── Bosses: flip horizontally when moving right ──
   for (const b of bosses) {
     const bossSize = TILE * 3;
@@ -1145,6 +1307,7 @@ function loop() {
   updateRage();
   updatePurple();
   updateWrench();
+  updateDemons();
   updateParticles();
   updateDayNight();
   updateCooldowns();
