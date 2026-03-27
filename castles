@@ -130,6 +130,15 @@
     opacity: 0; transition: opacity 0.4s;
     text-align: center;
   }
+  @keyframes rainbowText {
+    0%  { color: #ff0000; }
+    16% { color: #ff8800; }
+    33% { color: #ffff00; }
+    50% { color: #00ff00; }
+    66% { color: #0088ff; }
+    83% { color: #8800ff; }
+    100%{ color: #ff0000; }
+  }
 </style>
 </head>
 <body>
@@ -157,6 +166,15 @@
   <button onclick="location.reload()">▶ TRY AGAIN</button>
 </div>
 <div id="bossAlert">⚠ BOSS INCOMING ⚠</div>
+<div id="rainbowAlert" style="
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-family:'Press Start 2P',monospace; font-size:26px;
+  pointer-events:none; z-index:1500;
+  opacity:0; transition:opacity 0.4s;
+  text-align:center;
+  text-shadow: 0 0 20px #fff, 2px 2px 0 #ff0000, -2px -2px 0 #0000ff;
+  animation: rainbowText 0.4s infinite;
+">🌈 RAINBOW POWER! 🌈</div>
 <div id="levelUpToast"></div>
 <div id="hud">
   <div class="section">
@@ -270,6 +288,15 @@ const WRENCH_SPAWN_INTERVAL = 50 * 60;
 let wrenchPickups = [];
 let wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
 const wrenchIconImg = new Image(); wrenchIconImg.src = 'wrench.png';
+
+// ─── RAINBOW STATE ────────────────────────────────────────────
+const RAINBOW_SPAWN_INTERVAL = 110 * 60;
+let rainbowPickups = [];
+let rainbowPickupSpawn = RAINBOW_SPAWN_INTERVAL;
+let rainbowFlicker = 0; // frames of rainbow screen flicker remaining
+const RAINBOW_FLICKER_DURATION = 90;
+let rainbowSpawnSuppressTimer = 0; // no enemy spawns while > 0
+const rainbowIconImg = new Image(); rainbowIconImg.src = 'rainbow.png';
 
 // ─── DEMON STATE ─────────────────────────────────────────────
 const DEMON_SPAWN_INTERVAL = 45 * 60; // spawn a demon every 45s
@@ -484,7 +511,7 @@ function updateEnemies() {
   const isNight = dayTime > 0.45 && dayTime < 0.95;
   const spawnRate = isNight ? 0.06 : 0.025;
   const maxEnemies = isNight ? 35 + level * 2 : 20 + level;
-  if (enemies.length < maxEnemies && Math.random() < spawnRate && spawnPoints.length > 0) {
+  if (enemies.length < maxEnemies && Math.random() < spawnRate && spawnPoints.length > 0 && rainbowSpawnSuppressTimer <= 0) {
     const s = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
     const pool = isNight ? ENEMY_TYPES : ENEMY_TYPES.filter(e => !e.night);
     const type = pool[Math.floor(Math.random() * pool.length)];
@@ -578,6 +605,48 @@ function updateWrench() {
       showToast(`🔧 REPAIRED! +${heal} HP`);
     }
   }
+}
+
+// ─── RAINBOW POWERUP ─────────────────────────────────────────
+function updateRainbow() {
+  rainbowPickupSpawn--;
+  if (rainbowPickupSpawn <= 0) {
+    rainbowPickupSpawn = RAINBOW_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(px, py) === 0) rainbowPickups.push({ x: px, y: py, ttl: 20 * 60 });
+  }
+
+  for (let i = rainbowPickups.length - 1; i >= 0; i--) {
+    const r = rainbowPickups[i];
+    r.ttl--;
+    if (r.ttl <= 0) { rainbowPickups.splice(i, 1); continue; }
+    if (r.x === player.x && r.y === player.y) {
+      rainbowPickups.splice(i, 1);
+      // Kill all enemies, +1 HP per kill
+      const killed = enemies.length;
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        spawnParticles(enemies[j].x, enemies[j].y, `hsl(${Math.random()*360},100%,60%)`, 6, 2);
+        xp += enemies[j].xp;
+        score += enemies[j].xp * 10;
+        enemies.splice(j, 1);
+      }
+      const hpGain = killed;
+      player.hp = Math.min(player.hp + hpGain, player.maxHp);
+      checkLevelUp();
+      rainbowFlicker = RAINBOW_FLICKER_DURATION;
+      rainbowSpawnSuppressTimer = 20 * 60; // 20 seconds no enemy spawns
+      showToast(`🌈 RAINBOW POWER!`);
+      // Big centered alert
+      showRainbowAlert();
+    }
+  }
+
+  // Tick down flicker and suppress timer
+  if (rainbowFlicker > 0) rainbowFlicker--;
+  if (rainbowSpawnSuppressTimer > 0) rainbowSpawnSuppressTimer--;
 }
 
 function updateRage() {
@@ -854,6 +923,12 @@ function showBossAlert() {
   setTimeout(() => { el.style.opacity = "0"; }, 3000);
 }
 
+function showRainbowAlert() {
+  const el = document.getElementById("rainbowAlert");
+  el.style.opacity = "1";
+  setTimeout(() => { el.style.opacity = "0"; }, 2500);
+}
+
 function updateDayNight() {
   dayTime = (dayTime + 1 / DAY_CYCLE) % 1;
 }
@@ -1025,6 +1100,20 @@ function draw() {
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   }
 
+  // Rainbow pickups
+  for (const rp of rainbowPickups) {
+    const rpx = rp.x * TILE - camera.x, rpy = rp.y * TILE - camera.y;
+    const expiring = rp.ttl < 3 * 60;
+    const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.14);
+    // Cycling rainbow glow
+    const hue = (frameCount * 4) % 360;
+    ctx.globalAlpha = pulse;
+    ctx.shadowColor = `hsl(${hue},100%,60%)`; ctx.shadowBlur = 16 * pulse;
+    if (rainbowIconImg.complete && rainbowIconImg.naturalWidth > 0) ctx.drawImage(rainbowIconImg, rpx + 2, rpy + 2, TILE - 4, TILE - 4);
+    else { ctx.font = (TILE * 0.8) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🌈", rpx + TILE/2, rpy + TILE/2); }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
   // Enemies
   ctx.font = TILE * 0.8 + "px serif";
   for (const e of enemies) {
@@ -1163,6 +1252,18 @@ function draw() {
   }
 
   drawParticles();
+
+  // Rainbow flicker overlay
+  if (rainbowFlicker > 0) {
+    const progress = rainbowFlicker / RAINBOW_FLICKER_DURATION;
+    const hue = (frameCount * 18) % 360;
+    // Rapidly cycle through rainbow hues, fading out over duration
+    ctx.fillStyle = `hsla(${hue},100%,55%,${0.28 * progress})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Second layer offset hue for shimmer
+    ctx.fillStyle = `hsla(${(hue + 120) % 360},100%,55%,${0.15 * progress})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   // Day/Night overlay
   if (darkness > 0) {
@@ -1307,6 +1408,7 @@ function loop() {
   updateRage();
   updatePurple();
   updateWrench();
+  updateRainbow();
   updateDemons();
   updateParticles();
   updateDayNight();
