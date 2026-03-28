@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Builder Bros. - Boss Edition</title>
+<title>Castles - Boss Edition</title>
 <link rel="icon" type="image/x-icon" href="/bossfavicon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
@@ -38,6 +38,7 @@
   #hpFill { height: 100%; background: linear-gradient(90deg,#ff4444,#ff8800); transition: width 0.2s; border-radius: 2px; }
   #bossTimerVal { color: var(--gold); font-family: 'Press Start 2P', monospace; font-size: 11px; }
   #scoreVal { color: var(--gold); }
+  #bestVal { color: #aaffaa; }
   #levelVal { color: #88ffff; }
   .hud-label { color: #448844; font-size: 11px; }
   #controls {
@@ -193,6 +194,11 @@
     <span id="scoreVal">0</span>
   </div>
   <span class="sep">|</span>
+  <div class="section">
+    <span class="hud-label">BEST</span>
+    <span id="bestVal">0</span>
+  </div>
+  <span class="sep">|</span>
   <div class="section" id="rageSection" style="display:none;">
     <img src="rage_icon.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
     <div id="rageBar" style="width:80px;height:12px;background:#111;border:1px solid #ff4400;border-radius:2px;overflow:hidden;">
@@ -290,28 +296,35 @@ let wrenchPickups = [];
 let wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
 const wrenchIconImg = new Image(); wrenchIconImg.src = 'wrench.png';
 
-// ─── RAINBOW STATE ────────────────────────────────────────────
 const RAINBOW_SPAWN_INTERVAL = 110 * 60;
 let rainbowPickups = [];
 let rainbowPickupSpawn = RAINBOW_SPAWN_INTERVAL;
-let rainbowFlicker = 0; // frames of rainbow screen flicker remaining
+let rainbowFlicker = 0;
 const RAINBOW_FLICKER_DURATION = 90;
-let rainbowSpawnSuppressTimer = 0; // no enemy spawns while > 0
+let rainbowSpawnSuppressTimer = 0;
 const rainbowIconImg = new Image(); rainbowIconImg.src = 'rainbow.png';
 
-// ─── DEMON STATE ─────────────────────────────────────────────
-const DEMON_SPAWN_INTERVAL = 45 * 60; // spawn a demon every 45s
-const DEMON_MAX = 3;                   // max demons on screen
+const DEMON_SPAWN_INTERVAL = 45 * 60;
+const DEMON_MAX = 3;
 const DEMON_HP = 20;
-const DEMON_FLEE_RADIUS = 4;           // tiles — poof if player gets this close
-const DEMON_SHOOT_RATE = 90;           // frames between fireballs
+const DEMON_FLEE_RADIUS = 4;
+const DEMON_SHOOT_RATE = 90;
 let demons = [];
 let demonSpawnTimer = DEMON_SPAWN_INTERVAL;
 const demonImg = new Image(); demonImg.src = 'demon.png';
 const fireballImg = new Image(); fireballImg.src = 'fireball.png';
-let fireballs = [];                    // { x, y, dx, dy, dist }
+let fireballs = [];
 
 let _deadPlayed = false;
+
+// ─── COOKIE: BEST SCORE ──────────────────────────────────────
+function getBestScore() {
+  const match = document.cookie.match(/bestScore=(\d+)/);
+  return match ? parseInt(match[1]) : 0;
+}
+function saveBestScore(s) {
+  document.cookie = `bestScore=${s}; max-age=31536000; path=/`;
+}
 
 function resize() {
   canvas.width = window.innerWidth;
@@ -612,7 +625,6 @@ function updateWrench() {
   }
 }
 
-// ─── RAINBOW POWERUP ─────────────────────────────────────────
 function updateRainbow() {
   rainbowPickupSpawn--;
   if (rainbowPickupSpawn <= 0) {
@@ -623,14 +635,12 @@ function updateRainbow() {
     const py = player.y + Math.round(Math.sin(angle) * dist);
     if (getTile(px, py) === 0) rainbowPickups.push({ x: px, y: py, ttl: 20 * 60 });
   }
-
   for (let i = rainbowPickups.length - 1; i >= 0; i--) {
     const r = rainbowPickups[i];
     r.ttl--;
     if (r.ttl <= 0) { rainbowPickups.splice(i, 1); continue; }
     if (r.x === player.x && r.y === player.y) {
       rainbowPickups.splice(i, 1);
-      // Kill all enemies, +1 HP per kill
       const killed = enemies.length;
       for (let j = enemies.length - 1; j >= 0; j--) {
         spawnParticles(enemies[j].x, enemies[j].y, `hsl(${Math.random()*360},100%,60%)`, 6, 2);
@@ -642,14 +652,11 @@ function updateRainbow() {
       player.hp = Math.min(player.hp + hpGain, player.maxHp);
       checkLevelUp();
       rainbowFlicker = RAINBOW_FLICKER_DURATION;
-      rainbowSpawnSuppressTimer = 20 * 60; // 20 seconds no enemy spawns
+      rainbowSpawnSuppressTimer = 20 * 60;
       showToast(`🌈 RAINBOW POWER!`);
-      // Big centered alert
       showRainbowAlert();
     }
   }
-
-  // Tick down flicker and suppress timer
   if (rainbowFlicker > 0) rainbowFlicker--;
   if (rainbowSpawnSuppressTimer > 0) rainbowSpawnSuppressTimer--;
 }
@@ -709,13 +716,11 @@ function updateRage() {
   }
 }
 
-// ─── DEMONS ──────────────────────────────────────────────────
 function spawnDemonAt(x, y) {
   demons.push({ x, y, hp: DEMON_HP, maxHp: DEMON_HP, shootTimer: DEMON_SHOOT_RATE });
 }
 
 function teleportDemon(d) {
-  // Pick a random spot 10-20 tiles from player, not too close
   for (let attempt = 0; attempt < 20; attempt++) {
     const angle = Math.random() * Math.PI * 2;
     const dist = 10 + Math.floor(Math.random() * 10);
@@ -730,7 +735,6 @@ function teleportDemon(d) {
 }
 
 function updateDemons() {
-  // Spawn new demons periodically
   demonSpawnTimer--;
   if (demonSpawnTimer <= 0) {
     demonSpawnTimer = DEMON_SPAWN_INTERVAL;
@@ -743,33 +747,21 @@ function updateDemons() {
       spawnParticles(sx, sy, "#ff4400", 14, 2.5);
     }
   }
-
   for (let i = demons.length - 1; i >= 0; i--) {
     const d = demons[i];
-
-    // Flee if player too close — poof and reappear elsewhere
     const distToPlayer = Math.abs(d.x - player.x) + Math.abs(d.y - player.y);
     if (distToPlayer <= DEMON_FLEE_RADIUS) {
       spawnParticles(d.x, d.y, "#880000", 12, 2);
       teleportDemon(d);
       continue;
     }
-
-    // Shoot fireball toward player
     d.shootTimer--;
     if (d.shootTimer <= 0) {
       d.shootTimer = DEMON_SHOOT_RATE;
       const ddx = player.x - d.x, ddy = player.y - d.y;
       const len = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
-      fireballs.push({
-        x: d.x, y: d.y,
-        dx: ddx / len * 0.18,
-        dy: ddy / len * 0.18,
-        dist: 0
-      });
+      fireballs.push({ x: d.x, y: d.y, dx: ddx / len * 0.18, dy: ddy / len * 0.18, dist: 0 });
     }
-
-    // Remove if dead
     if (d.hp <= 0) {
       spawnParticles(d.x, d.y, "#ff4400", 20, 3);
       spawnParticles(d.x, d.y, "#ffd700", 10, 2);
@@ -780,13 +772,9 @@ function updateDemons() {
       checkLevelUp();
     }
   }
-
-  // Update fireballs
   for (let i = fireballs.length - 1; i >= 0; i--) {
     const f = fireballs[i];
     f.x += f.dx; f.y += f.dy; f.dist += Math.sqrt(f.dx * f.dx + f.dy * f.dy);
-
-    // Hit player
     if (Math.abs(f.x - player.x) < 0.6 && Math.abs(f.y - player.y) < 0.6 && player.invincible <= 0) {
       player.hp -= 12;
       player.invincible = 30;
@@ -795,8 +783,6 @@ function updateDemons() {
       fireballs.splice(i, 1);
       continue;
     }
-
-    // Remove if out of range
     if (f.dist > 25) fireballs.splice(i, 1);
   }
 }
@@ -829,7 +815,6 @@ function updateProjectiles() {
         }
       }
     }
-    // Only lightning damages demons
     if (!hit) {
       for (let j = demons.length - 1; j >= 0; j--) {
         if (Math.abs(p.x - demons[j].x) <= 1 && Math.abs(p.y - demons[j].y) <= 1) {
@@ -872,7 +857,6 @@ function updateBosses() {
   } else {
     const bX = player.x + (Math.random() > 0.5 ? 18 : -18);
     const bY = player.y + (Math.random() > 0.5 ? 18 : -18);
-    // facingRight defaults false (facing left is the sprite's natural direction)
     bosses.push({ x: bX, y: bY, hp: 40 + level * 5, maxHp: 40 + level * 5, timer: 0, facingRight: false });
     bossTimer = BOSS_INTERVAL;
   }
@@ -882,7 +866,6 @@ function updateBosses() {
     if (b.timer <= 0) {
       b.timer = Math.max(15, 35 - level * 2);
       const dx = Math.sign(player.x - b.x), dy = Math.sign(player.y - b.y);
-      // Track horizontal facing for sprite flip
       if (dx !== 0) b.facingRight = dx > 0;
       let moved = false;
       for (const [bdx, bdy] of [[dx, dy],[dx, 0],[0, dy]]) {
@@ -1110,7 +1093,6 @@ function draw() {
     const rpx = rp.x * TILE - camera.x, rpy = rp.y * TILE - camera.y;
     const expiring = rp.ttl < 3 * 60;
     const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.14);
-    // Cycling rainbow glow
     const hue = (frameCount * 4) % 360;
     ctx.globalAlpha = pulse;
     ctx.shadowColor = `hsl(${hue},100%,60%)`; ctx.shadowBlur = 16 * pulse;
@@ -1169,7 +1151,6 @@ function draw() {
       ctx.fillText("👿", d.x * TILE + TILE/2 - camera.x, d.y * TILE + TILE/2 - camera.y + bob);
     }
     ctx.shadowBlur = 0;
-    // Demon health bar
     const barW = TILE * 3, barH = 8;
     const bpx = d.x * TILE - camera.x + TILE/2 - barW/2;
     const bpy = d.y * TILE - camera.y - dSize/2 - 18 + bob;
@@ -1183,14 +1164,13 @@ function draw() {
     ctx.fillText(`DEMON ${Math.ceil(d.hp)}/${d.maxHp}`, bpx + barW/2, bpy - 4);
   }
 
-  // ── Bosses: flip horizontally when moving right ──
+  // Bosses — flip horizontally when moving right
   for (const b of bosses) {
     const bossSize = TILE * 3;
     const bx3 = (b.x - 1) * TILE - camera.x;
     const by3 = (b.y - 1) * TILE - camera.y;
     ctx.save();
     if (b.facingRight) {
-      // Flip around the boss center point
       ctx.translate(bx3 + bossSize / 2, by3 + bossSize / 2);
       ctx.scale(-1, 1);
       ctx.translate(-(bx3 + bossSize / 2), -(by3 + bossSize / 2));
@@ -1262,10 +1242,8 @@ function draw() {
   if (rainbowFlicker > 0) {
     const progress = rainbowFlicker / RAINBOW_FLICKER_DURATION;
     const hue = (frameCount * 18) % 360;
-    // Rapidly cycle through rainbow hues, fading out over duration
     ctx.fillStyle = `hsla(${hue},100%,55%,${0.28 * progress})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Second layer offset hue for shimmer
     ctx.fillStyle = `hsla(${(hue + 120) % 360},100%,55%,${0.15 * progress})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -1293,6 +1271,7 @@ function draw() {
   document.getElementById("hpVal").textContent = Math.ceil(player.hp);
   document.getElementById("scoreVal").textContent = score;
   document.getElementById("levelVal").textContent = level;
+  document.getElementById("bestVal").textContent = getBestScore();
   const sec = Math.ceil(bossTimer / 60);
   document.getElementById("bossTimerVal").textContent = `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, "0")}`;
   const dl = getDayLabel();
@@ -1356,8 +1335,12 @@ function draw() {
       deadSound.volume = 0.8;
       deadSound.currentTime = 0;
       deadSound.play().catch(() => {});
+      const best = getBestScore();
+      if (score > best) saveBestScore(score);
     }
-    document.getElementById("finalScore").textContent = `Score: ${score} | Level: ${level}`;
+    const best = getBestScore();
+    document.getElementById("finalScore").textContent =
+      `Score: ${score} | Level: ${level}${score >= best && score > 0 ? " | 🏆 NEW BEST!" : " | Best: " + best}`;
     document.getElementById("gameOverScreen").style.display = "flex";
   }
 }
