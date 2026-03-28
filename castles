@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Builder Bros. - Boss Edition</title>
+<link rel="icon" type="image/x-icon" href="/bossfavicon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,7 +21,7 @@
     font-family: 'Share Tech Mono', monospace;
     color: var(--green);
   }
-  canvas { display: block; }
+  canvas { display: block; image-rendering: pixelated; }
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
     display: flex; align-items: center; gap: 16px;
@@ -147,13 +148,12 @@
 <div id="titleScreen">
   <img src="bossfavicon.png" style="width:80px; height:80px; image-rendering:pixelated; filter: drop-shadow(0 0 12px #88ff88) drop-shadow(0 0 24px #44aa44); animation: flicker 4s infinite;" alt="Boss">
   <pre id="ascii">
- _______   ____  ____   __    ___       ________    _______   _______       _______    _______     ______    ________
-|   _  "\ ("  _||_ " | |" \  |"  |     |"      "\  /"     "| /"      \     |   _  "\  /"      \   /    " \  /"       )
-(. |_)  :)|   (  ) : | ||  | ||  |     (.  ___  :)(: ______)|:        |    (. |_)  :)|:        | // ____  \(:   \___/
-|:     \/ (:  |  | . ) |:  | |:  |     |: \   ) || \/    |  |_____/   )    |:     \/ |_____/   )/  /    ) :)\___  \
-(|  _  \\  \\ \__/ //  |.  |  \  |___  (| (___\ || // ___)_  //      /     (|  _  \\  //      /(: (____/ //  __/  \\
-|: |_)  :) /\\ __ //\  /\  |\( \_|:  \ |:       :)(:      "||:  __   \     |: |_)  :)|:  __   \ \        /  /" \   :)
-(_______/ (__________)(__\_|_)\_______)(________/  \_______)|__|  \___)    (_______/ |__|  \___) \"_____/  (_______/
+ ██████╗ █████╗ ███████╗████████╗██╗     ███████╗███████╗
+██╔════╝██╔══██╗██╔════╝╚══██╔══╝██║     ██╔════╝██╔════╝
+██║     ███████║███████╗   ██║   ██║     █████╗  ███████╗
+██║     ██╔══██║╚════██║   ██║   ██║     ██╔══╝  ╚════██║
+╚██████╗██║  ██║███████║   ██║   ███████╗███████╗███████║
+ ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚══════╝╚══════╝
   </pre>
   <div id="titleText">BOSS EDITION</div>
   <div id="subtitleText">An infinite world awaits. Survive enemy hordes, build your fortress, and defeat the Boss every 3 minutes.<br></div>
@@ -241,6 +241,7 @@ const DAY_CYCLE = 60 * 60;
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
 
 let gameStarted = false;
 let paused = false;
@@ -312,7 +313,11 @@ let fireballs = [];                    // { x, y, dx, dy, dist }
 
 let _deadPlayed = false;
 
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  ctx.imageSmoothingEnabled = false;
+}
 window.addEventListener("resize", resize); resize();
 
 const k = (x, y) => `${x},${y}`;
