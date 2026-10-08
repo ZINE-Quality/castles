@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Castles - Boss Edition</title>
-<link rel="icon" type="image/x-icon" href="/bossfavicon.png">
+<link rel="icon" type="image/png" href="png/bossfavicon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,7 +22,7 @@
     font-family: 'Share Tech Mono', monospace;
     color: var(--green);
   }
-  canvas { display: block; image-rendering: pixelated; }
+  canvas { display: block; image-rendering: pixelated; touch-action: none; -webkit-touch-callout: none; }
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
     display: flex; align-items: center; gap: 16px;
@@ -56,9 +57,12 @@
     position: fixed; inset: 0;
     background: #000;
     display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
+    justify-content: flex-start; align-items: center;
     z-index: 2000; text-align: center;
     gap: 16px;
+    overflow-y: auto;
+    padding: 40px 0;
+    box-sizing: border-box;
   }
   #ascii {
     font-size: 9px; line-height: 13px;
@@ -141,13 +145,93 @@
     83% { color: #8800ff; }
     100%{ color: #ff0000; }
   }
+  #touchControls {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    pointer-events: none; z-index: 950;
+    height: 200px;
+  }
+  #touchDpad {
+    position: absolute; bottom: 20px; left: 20px;
+    width: 160px; height: 160px;
+    pointer-events: none;
+  }
+  #touchDpad button {
+    position: absolute; pointer-events: auto;
+    width: 52px; height: 52px;
+    background: rgba(136,255,136,0.18);
+    border: 2px solid rgba(136,255,136,0.4);
+    border-radius: 8px;
+    color: rgba(136,255,136,0.7);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    cursor: pointer;
+    transition: background 0.08s;
+  }
+  #touchDpad button:active, #touchDpad button.pressed {
+    background: rgba(136,255,136,0.4);
+    border-color: rgba(136,255,136,0.7);
+  }
+  #touchDpad .dpad-up    { top: 0;   left: 54px; }
+  #touchDpad .dpad-left  { top: 54px; left: 0; }
+  #touchDpad .dpad-down  { top: 108px; left: 54px; }
+  #touchDpad .dpad-right { top: 54px; left: 108px; }
+  #touchActions {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+  #touchActions button {
+    pointer-events: auto;
+    width: 68px; height: 68px;
+    background: rgba(136,255,136,0.18);
+    border: 2px solid rgba(136,255,136,0.4);
+    border-radius: 10px;
+    color: rgba(136,255,136,0.8);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    transition: background 0.08s;
+  }
+  #touchActions button:active, #touchActions button.pressed {
+    background: rgba(136,255,136,0.4);
+    border-color: rgba(136,255,136,0.7);
+  }
+  #touchActions .btn-icon { font-size: 18px; line-height: 1; }
+  body.ios-tablet #touchDpad { width: 280px; height: 280px; bottom: 30px; left: 30px; }
+  body.ios-tablet #touchDpad button { width: 88px; height: 88px; font-size: 24px; }
+  body.ios-tablet #touchDpad .dpad-up    { top: 0;   left: 92px; }
+  body.ios-tablet #touchDpad .dpad-left  { top: 92px; left: 0; }
+  body.ios-tablet #touchDpad .dpad-down  { top: 184px; left: 92px; }
+  body.ios-tablet #touchDpad .dpad-right { top: 92px; left: 184px; }
+  body.ios-tablet #touchActions { gap: 16px; right: 24px; }
+  body.ios-tablet #touchActions button { width: 110px; height: 80px; font-size: 13px; }
+  body.ios-tablet #touchActions .btn-icon { font-size: 28px; }
 </style>
 </head>
 <body>
-<audio id="bgMusic" src="castles.wav" preload="auto" loop></audio>
-<audio id="deadSound" src="dead.wav" preload="auto"></audio>
+<audio id="bgMusic" src="wav/castles.wav" preload="auto" loop></audio>
+<audio id="rageSound" src="wav/rage.wav" preload="auto"></audio>
+<audio id="wrenchSound" src="wav/wrench.wav" preload="auto"></audio>
+<audio id="rainbowSound" src="wav/rainbow.wav" preload="auto"></audio>
+<audio id="deadSound" src="wav/dead.wav" preload="auto"></audio>
+<audio id="ouchSound" src="wav/ouch.wav" preload="auto"></audio>
+<audio id="purpleSound" src="wav/purple.wav" preload="auto"></audio>
+<audio id="shootSound" src="wav/shoot.wav" preload="auto"></audio>
+<audio id="fireAtNightSound" src="wav/fireatnight.wav" preload="auto"></audio>
 <div id="titleScreen">
-  <img src="bossfavicon.png" style="width:80px; height:80px; image-rendering:pixelated; filter: drop-shadow(0 0 12px #88ff88) drop-shadow(0 0 24px #44aa44); animation: flicker 4s infinite;" alt="Boss">
+  <img src="png/bossfavicon.png" style="width:80px; height:80px; image-rendering:pixelated; filter: drop-shadow(0 0 12px #88ff88) drop-shadow(0 0 24px #44aa44); animation: flicker 4s infinite;" alt="Boss">
   <pre id="ascii">
  ██████╗ █████╗ ███████╗████████╗██╗     ███████╗███████╗
 ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██║     ██╔════╝██╔════╝
@@ -159,14 +243,316 @@
   <div id="titleText">BOSS EDITION</div>
   <div id="subtitleText">An infinite world awaits. Survive enemy hordes, build your fortress, and defeat the Boss every 3 minutes.<br></div>
   <button id="startBtn">▶ START GAME</button>
-  <div id="keyHints">Arrows/WASD: Move &nbsp;|&nbsp; T: Iron Wall &nbsp;|&nbsp; Space: ⚡ Lightning &nbsp;|&nbsp; U: Mushroom &nbsp;|&nbsp; G: 🚪 Door &nbsp;|&nbsp; M: Mute</div>
+  <button id="peacefulBtn" onclick="startGame(true)" style="
+    padding: 10px 30px;
+    font-family:'Press Start 2P',monospace; font-size:11px;
+    background:#000; color:#44aaff; border:2px solid #1a4488;
+    cursor:pointer; letter-spacing:1px; transition: all 0.15s;
+    box-shadow: 0 0 8px #1a4488;
+  " onmouseover="this.style.color='#88ccff';this.style.borderColor='#4488ff';this.style.boxShadow='0 0 16px #4488ff';"
+     onmouseout="this.style.color='#44aaff';this.style.borderColor='#1a4488';this.style.boxShadow='0 0 8px #1a4488';">
+    🕊 PEACEFUL MODE
+  </button>
+  <button onclick="document.getElementById('storyOverlay').style.display='flex';" style="
+    padding: 8px 24px;
+    font-family:'Press Start 2P',monospace; font-size:10px;
+    background:#000; color:#ff8844; border:1px solid #882200;
+    cursor:pointer; letter-spacing:1px; transition: all 0.15s;
+  " onmouseover="this.style.color='#ffaa66';this.style.borderColor='#ff4400';"
+     onmouseout="this.style.color='#ff8844';this.style.borderColor='#882200';">
+    📖 STORY
+  </button>
+  <button id="tabletBtn" onclick="tabletMode=true; startGame(false);" style="
+    padding: 10px 30px;
+    font-family:'Press Start 2P',monospace; font-size:11px;
+    background:#000; color:#44ff88; border:2px solid #1a8844;
+    cursor:pointer; letter-spacing:1px; transition: all 0.15s;
+    box-shadow: 0 0 8px #1a8844;
+  " onmouseover="this.style.color='#88ffaa';this.style.borderColor='#44ff88';this.style.boxShadow='0 0 16px #44ff88';"
+     onmouseout="this.style.color='#44ff88';this.style.borderColor='#1a8844';this.style.boxShadow='0 0 8px #1a8844';">
+    📱 TABLET MODE
+  </button>
+  <button onclick="document.getElementById('creatorsOverlay').style.display='flex';" style="
+    padding: 8px 24px;
+    font-family:'Press Start 2P',monospace; font-size:10px;
+    background:#000; color:#448844; border:1px solid #1a4a1a;
+    cursor:pointer; letter-spacing:1px; transition: all 0.15s;
+  " onmouseover="this.style.color='#88ff88';this.style.borderColor='#88ff88';"
+     onmouseout="this.style.color='#448844';this.style.borderColor='#1a4a1a';">
+    📜 MESSAGE FROM THE CREATORS
+  </button>
+  <div id="keyHints">Arrows/WASD: Move &nbsp;|&nbsp; T: Iron Wall &nbsp;|&nbsp; Space: ⚡ Lightning &nbsp;|&nbsp; F: 🔥 Fire &nbsp;|&nbsp; G: 🚪 Door &nbsp;|&nbsp; M: Mute</div>
+  <div style="display:flex; flex-direction:row; gap:16px; justify-content:center; align-items:center;">
+    <a href="https://bandt.site/tower_defense/index.html" id="towerDefenseLink" style="display:inline-block; transition: all 0.15s;"
+       onmouseover="this.style.filter='drop-shadow(0 0 12px #88ff88)'; this.style.transform='scale(1.03)';"
+       onmouseout="this.style.filter='none'; this.style.transform='scale(1)';">
+      <img src="png/Castles2_button.png" alt="Play Tower Defense" style="width:220px; height:auto; image-rendering:pixelated;">
+    </a>
+    <a href="https://bandt.site/mandy" id="mandyLink" style="display:inline-block; transition: all 0.15s;"
+       onmouseover="this.style.filter='drop-shadow(0 0 12px #88ff88)'; this.style.transform='scale(1.03)';"
+       onmouseout="this.style.filter='none'; this.style.transform='scale(1)';">
+      <img src="png/mandy_button.png" alt="Mandy" style="width:220px; height:auto; image-rendering:pixelated;">
+    </a>
+  </div>
+</div>
+
+<!-- SKIN SELECTOR SCREEN -->
+<div id="skinScreen" style="
+  display:none; position:fixed; inset:0;
+  background:#000;
+  z-index:1500;
+  flex-direction:column;
+  justify-content:center; align-items:center;
+  gap:32px;
+  font-family:'Share Tech Mono',monospace;
+">
+  <div style="font-family:'Press Start 2P',monospace; font-size:16px; color:#ffd700; text-shadow:0 0 12px #ffd700;">
+    SELECT YOUR CHARACTER
+  </div>
+  <div id="skinOptions" style="display:flex; gap:40px; flex-wrap:wrap; justify-content:center;"></div>
 </div>
 <div id="gameOverScreen" class="overlay">
   <h1>☠ GAME OVER</h1>
   <div class="sub" id="finalScore"></div>
+  <button onclick="respawnPlayer()">▶ RESPAWN</button>
   <button onclick="location.reload()">▶ TRY AGAIN</button>
 </div>
+
+<div id="creatorsOverlay" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.92);
+  z-index:4000;
+  justify-content:center; align-items:center;
+  flex-direction:column;
+">
+  <div style="
+    max-width:600px; width:90%;
+    background:#000;
+    border:1px solid #1a4a1a;
+    padding:40px;
+    position:relative;
+    font-family:'Share Tech Mono',monospace;
+    color:#88ff88;
+    line-height:1.8;
+    max-height:80vh;
+    overflow-y:auto;
+  ">
+    <button onclick="document.getElementById('creatorsOverlay').style.display='none';" style="
+      position:absolute; top:12px; right:16px;
+      background:#000; color:#88ff88; border:1px solid #1a4a1a;
+      font-family:'Press Start 2P',monospace; font-size:12px;
+      cursor:pointer; padding:4px 10px;
+    ">✕</button>
+    <div style="font-family:'Press Start 2P',monospace; font-size:13px; color:#ffd700; margin-bottom:24px; text-shadow:0 0 10px #ffd700;">
+      📜 MESSAGE FROM THE CREATORS
+    </div>
+    <p style="margin-bottom:16px;">
+      Thank you for playing our game! This is a father and son AI coding project made with Claude.
+    </p>
+    <p style="margin-bottom:16px;">
+      All of the art assets are either emojis or created by us in Krita. Audio assets were built in beepbox.co and modified in Audacity.
+    </p>
+    <p style="margin-bottom:16px;">
+      This is not a commercial project. We built this just for the fun of it and to learn more about game design.
+    </p>
+    <p style="margin-bottom:16px;">
+      The game is created by <span style="color:#ffd700;">Dash (age 7)</span> and his father. 🤖
+    </p>
+    <p style="margin-bottom:16px;">
+      Game controls are on the title page and on the bottom of the screen. There are some Easter Egg controls if you go looking for them! 🥚
+    </p>
+    <p style="margin-bottom:16px;">
+      The purpose of the game is to build and protect your castle while amassing a high score.
+    </p>
+    <p>
+      Again, we thank you for playing! 🏆
+    </p>
+  </div>
+</div>
 <div id="bossAlert">⚠ BOSS INCOMING ⚠</div>
+<div id="axerArrow" style="
+  display:none; position:fixed; bottom:30px; right:30px;
+  width:56px; height:56px; z-index:900; pointer-events:none;
+  font-size:44px; text-align:center; line-height:56px;
+  color:#ffd700; text-shadow:0 0 10px #ffd700, 0 0 20px #ffaa00;
+  transform-origin:50% 50%;
+">➤</div>
+
+<div id="storyOverlay" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.92);
+  z-index:4000;
+  justify-content:center; align-items:center;
+  flex-direction:column;
+">
+  <div style="
+    max-width:600px; width:90%;
+    background:#000;
+    border:1px solid #882200;
+    padding:40px;
+    position:relative;
+    font-family:'Share Tech Mono',monospace;
+    color:#ff8844;
+    line-height:2;
+    max-height:80vh;
+    overflow-y:auto;
+    box-shadow: 0 0 30px #44000088;
+  ">
+    <button onclick="document.getElementById('storyOverlay').style.display='none';" style="
+      position:absolute; top:12px; right:16px;
+      background:#000; color:#ff8844; border:1px solid #882200;
+      font-family:'Press Start 2P',monospace; font-size:12px;
+      cursor:pointer; padding:4px 10px;
+    ">✕</button>
+    <div style="font-family:'Press Start 2P',monospace; font-size:13px; color:#ffd700; margin-bottom:24px; text-shadow:0 0 10px #ffd700;">
+      📖 THE STORY
+    </div>
+    <p style="margin-bottom:16px;">
+      Our story begins after the fall of the great <span style="color:#ffd700;">Dashland Castle</span>. A greedy and evil dragon had gathered all of the dark forces in the world to destroy all of humanity.
+    </p>
+    <p style="margin-bottom:16px;">
+      Now a lone robot fights to rebuild the castle and defeat these dark forces once and for all.
+    </p>
+    <p style="color:#ffcc44; font-style:italic;">
+      The only question is... is it too late?
+    </p>
+  </div>
+</div>
+
+<!-- BOSS 5 VICTORY OVERLAY -->
+<div id="boss5Victory" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.92);
+  z-index:4500;
+  justify-content:center; align-items:center;
+  flex-direction:column;
+">
+  <div style="
+    max-width:560px; width:90%;
+    background:#000;
+    border:2px solid #ffd700;
+    padding:48px 40px;
+    position:relative;
+    text-align:center;
+    box-shadow: 0 0 40px #ffd700, 0 0 80px #ffaa00;
+  ">
+    <button onclick="closeBoss5Victory();" style="
+      position:absolute; top:12px; right:16px;
+      background:#000; color:#ffd700; border:1px solid #ffd700;
+      font-family:'Press Start 2P',monospace; font-size:12px;
+      cursor:pointer; padding:4px 10px;
+    ">✕</button>
+    <div style="font-size:48px; margin-bottom:20px;">🏆</div>
+    <div style="
+      font-family:'Press Start 2P',monospace; font-size:16px;
+      color:#ffd700; text-shadow:0 0 16px #ffd700;
+      margin-bottom:24px; line-height:1.8;
+    ">YOU HAVE DEFEATED<br>ALL 5 BOSSES!</div>
+    <div style="
+      font-family:'Share Tech Mono',monospace; font-size:15px;
+      color:#88ff88; line-height:2;
+    ">
+      Thank you from<br>
+      <span style="color:#ffd700;">Dash, Penny, Noble, Kevin, and Megan!</span>
+    </div>
+    <div style="font-size:32px; margin-top:24px;">🎉🌈🎉</div>
+  </div>
+</div>
+
+<!-- CORRUPTED HEART VICTORY OVERLAY -->
+<div id="corruptionVictory" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.92);
+  z-index:4500;
+  justify-content:center; align-items:center;
+  flex-direction:column;
+">
+  <div style="
+    max-width:560px; width:90%;
+    background:#000;
+    border:2px solid #ff0066;
+    padding:48px 40px;
+    position:relative;
+    text-align:center;
+    box-shadow: 0 0 40px #ff0066, 0 0 80px #ff0066;
+  ">
+    <button onclick="closeCorruptionVictory();" style="
+      position:absolute; top:12px; right:16px;
+      background:#000; color:#ff0066; border:1px solid #ff0066;
+      font-family:'Press Start 2P',monospace; font-size:12px;
+      cursor:pointer; padding:4px 10px;
+    ">✕</button>
+    <div style="font-size:48px; margin-bottom:20px;">💔</div>
+    <div style="
+      font-family:'Press Start 2P',monospace; font-size:15px;
+      color:#ff0066; text-shadow:0 0 16px #ff0066;
+      margin-bottom:24px; line-height:1.9;
+    ">HA! THAT WAS THE<br>TRUE ENDING.<br>YOU HAVE DEFEATED<br>THE CORRUPTION!</div>
+  </div>
+</div>
+
+<!-- AXER DIALOG -->
+<div id="axerDialog" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:4200;
+  justify-content:center; align-items:center;
+  flex-direction:column;
+">
+  <div style="
+    max-width:640px; width:90%;
+    background:#000;
+    border:2px solid #44aa44;
+    padding:32px;
+    display:flex; flex-direction:row; align-items:center; gap:24px;
+    box-shadow:0 0 30px #226622;
+    font-family:'Share Tech Mono',monospace;
+  ">
+    <img src="png/axer.png" style="width:110px;height:110px;image-rendering:pixelated;flex-shrink:0;" alt="Axer">
+    <div style="flex:1;">
+      <div style="color:#88ff88; font-size:15px; line-height:1.7; margin-bottom:20px;">
+        "Hi there little robot! I'd appreciate ya not wrecking my fence! Beat this game and I will give you a key to another challenge."
+      </div>
+      <div style="display:flex; gap:16px;">
+        <button onclick="closeAxerDialog(true);" style="
+          padding:10px 28px; font-family:'Press Start 2P',monospace; font-size:12px;
+          background:#000; color:#88ff88; border:2px solid #1a4a1a; cursor:pointer;
+          letter-spacing:1px; transition: all 0.15s;
+        " onmouseover="this.style.color='#ccffcc';this.style.borderColor='#44ff88';"
+           onmouseout="this.style.color='#88ff88';this.style.borderColor='#1a4a1a';">YES</button>
+        <button onclick="closeAxerDialog(false);" style="
+          padding:10px 28px; font-family:'Press Start 2P',monospace; font-size:12px;
+          background:#000; color:#ff6666; border:2px solid #4a1a1a; cursor:pointer;
+          letter-spacing:1px; transition: all 0.15s;
+        " onmouseover="this.style.color='#ffaaaa';this.style.borderColor='#ff4444';"
+           onmouseout="this.style.color='#ff6666';this.style.borderColor='#4a1a1a';">NO</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MINI GAME OVERLAY (DEBUG EASTER EGG - L KEY) -->
+<div id="miniGameOverlay" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.92);
+  z-index:5000;
+  justify-content:center; align-items:center;
+  flex-direction:column;
+">
+  <div style="position:relative; display:inline-block;">
+    <button onclick="closeMiniGame(false);" style="
+      position:absolute; top:-36px; right:0;
+      background:#000; color:#88ff88; border:1px solid #1a4a1a;
+      font-family:'Press Start 2P',monospace; font-size:12px;
+      cursor:pointer; padding:4px 10px; z-index:10;
+    ">✕</button>
+    <div style="font-family:'Press Start 2P',monospace; font-size:11px; color:#ffd700; text-align:center; margin-bottom:8px;">
+      🎮 MINI GAME — Reach the cyan block! Avoid the bad guy!
+    </div>
+    <canvas id="miniCanvas" width="500" height="600" style="display:block; border:2px solid #1a4a1a; image-rendering:pixelated;"></canvas>
+  </div>
+</div>
+
 <div id="rainbowAlert" style="
   position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
   font-family:'Press Start 2P',monospace; font-size:26px;
@@ -199,8 +585,19 @@
     <span id="bestVal">0</span>
   </div>
   <span class="sep">|</span>
+  <div class="section">
+    <span style="font-size:14px;line-height:1;">🔥</span>
+    <span class="hud-label">FIRE</span>
+    <span id="fireChargeVal" style="font-size:11px;color:#ff6600;">20/20</span>
+  </div>
+  <span class="sep">|</span>
+  <div class="section" id="keySection" style="display:none;">
+    <span style="font-size:16px;line-height:1;">🔑</span>
+    <span class="hud-label">KEY</span>
+  </div>
+  <span class="sep" id="keySep" style="display:none;">|</span>
   <div class="section" id="rageSection" style="display:none;">
-    <img src="rage_icon.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <img src="png/rage_icon.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
     <div id="rageBar" style="width:80px;height:12px;background:#111;border:1px solid #ff4400;border-radius:2px;overflow:hidden;">
       <div id="rageFill" style="height:100%;width:100%;background:linear-gradient(90deg,#ff2200,#ff8800);border-radius:2px;transition:width 0.1s;"></div>
     </div>
@@ -208,11 +605,19 @@
   </div>
   <span class="sep">|</span>
   <div class="section" id="purpleSection" style="display:none;">
-    <img src="purple_electric.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <img src="png/purple_electric.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
     <div id="purpleBar" style="width:80px;height:12px;background:#111;border:1px solid #aa44ff;border-radius:2px;overflow:hidden;">
       <div id="purpleFill" style="height:100%;width:100%;background:linear-gradient(90deg,#7700ff,#cc44ff);border-radius:2px;transition:width 0.1s;"></div>
     </div>
     <span id="purpleLabel" style="font-size:11px;color:#cc44ff;">READY</span>
+  </div>
+  <span class="sep" id="clone2xSep" style="display:none">|</span>
+  <div class="section" id="clone2xSection" style="display:none;">
+    <img src="png/2x_icon.png" style="width:18px;height:18px;image-rendering:pixelated;vertical-align:middle;">
+    <div id="clone2xBar" style="width:80px;height:12px;background:#111;border:1px solid #00ccff;border-radius:2px;overflow:hidden;">
+      <div id="clone2xFill" style="height:100%;width:100%;background:linear-gradient(90deg,#0088ff,#00ffff);border-radius:2px;transition:width 0.1s;"></div>
+    </div>
+    <span id="clone2xLabel" style="font-size:11px;color:#00ccff;">60s</span>
   </div>
   <span class="sep">|</span>
   <div class="section">
@@ -233,12 +638,27 @@
   ">⏸ PAUSE</button>
 </div>
 <canvas id="game"></canvas>
-<img id="rageGifEl" src="rage.gif" style="display:none; position:fixed; pointer-events:none; z-index:800; image-rendering:pixelated;">
-<img id="purpleGifEl" src="purple_electric.gif" style="display:none; position:fixed; pointer-events:none; z-index:800; image-rendering:pixelated;">
+<img id="rageGifEl" src="gif/rage.gif" style="display:none; position:fixed; pointer-events:none; z-index:800; image-rendering:pixelated;">
+<img id="rageSkinEl" style="display:none; position:fixed; pointer-events:none; z-index:801; image-rendering:pixelated;">
+<img id="purpleGifEl" src="gif/purple_electric.gif" style="display:none; position:fixed; pointer-events:none; z-index:800; image-rendering:pixelated;">
 <div id="controls">
   <span>B=🪨</span><span>Y=🌳</span><span>R=🌵</span><span>U=🍄</span>
-  <span>T=⬛Iron</span><span>G=🚪Door</span><span>H=Lava</span>
-  <span>Space=⚡/😡Rage</span><span>Arrows/WASD=Move</span><span>M=Mute</span>
+  <span>T=⬛Iron</span><span>G=🚪Door</span><span>F=🔥</span><span>H=Lava</span>
+  <span>Space=⚡/😡Rage/⚡Purple</span><span>Arrows/WASD=Move</span><span>M=Mute</span>
+</div>
+<div id="touchControls">
+  <div id="touchDpad">
+    <button class="dpad-up" data-key="w">W</button>
+    <button class="dpad-left" data-key="a">A</button>
+    <button class="dpad-down" data-key="s">S</button>
+    <button class="dpad-right" data-key="d">D</button>
+  </div>
+  <div id="touchActions">
+    <button data-key="f"><span class="btn-icon">🔥</span>FIRE</button>
+    <button data-key=" "><span class="btn-icon">⚡</span>SPACE</button>
+    <button data-key="g"><span class="btn-icon">🚪</span>DOOR</button>
+    <button data-key="t"><span class="btn-icon">⬛</span>IRON</button>
+  </div>
 </div>
 <script>
 const TILE = 36;
@@ -249,7 +669,41 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
+// ─── CACHED DOM ELEMENTS ──────────────────────────────────────
+const hudHpFill      = document.getElementById("hpFill");
+const hudHpVal       = document.getElementById("hpVal");
+const hudScoreVal    = document.getElementById("scoreVal");
+const hudLevelVal    = document.getElementById("levelVal");
+const hudBestVal     = document.getElementById("bestVal");
+const hudBossTimerVal= document.getElementById("bossTimerVal");
+const hudDayPhaseLbl = document.getElementById("dayPhaseLbl");
+const hudRageSection = document.getElementById("rageSection");
+const hudRageFill    = document.getElementById("rageFill");
+const hudRageLabel   = document.getElementById("rageLabel");
+const hudPurpleSection = document.getElementById("purpleSection");
+const hudPurpleFill  = document.getElementById("purpleFill");
+const hudPurpleLabel = document.getElementById("purpleLabel");
+const hudClone2xSection = document.getElementById("clone2xSection");
+const hudClone2xSep  = document.getElementById("clone2xSep");
+const hudClone2xFill = document.getElementById("clone2xFill");
+const hudClone2xLabel= document.getElementById("clone2xLabel");
+const hudRageGifEl   = document.getElementById("rageGifEl");
+const hudRageSkinEl  = document.getElementById("rageSkinEl");
+const hudPurpleGifEl = document.getElementById("purpleGifEl");
+const hudFireChargeVal = document.getElementById("fireChargeVal");
+const hudGameOverScreen = document.getElementById("gameOverScreen");
+const hudFinalScore  = document.getElementById("finalScore");
+const hudDayBarCanvas= document.getElementById("dayBar");
+let _dayBarCtx = null;
+let _dayBarGrad = null;
+// HUD change-detection caches
+let _hudHp = -1, _hudScore = -1, _hudLevel = -1, _hudBest = -1;
+let _hudBossTimerText = "", _hudDayLabel = "", _hudDayColor = "";
+let _rageFilterSet = false, _purpleFilterSet = false;
+
 let gameStarted = false;
+let peacefulMode = false;
+let tabletMode = false;
 let paused = false;
 let frameCount = 0;
 let score = 0;
@@ -273,11 +727,357 @@ let cameraTarget = { x: 0, y: 0 };
 const DEAD_ZONE = TILE * 4;
 const CAM_EASE = 0.08;
 
-const bossImg = new Image(); bossImg.src = 'boss.png';
-const rageIconImg = new Image(); rageIconImg.src = 'rage_icon.png';
+const bossImgs = [new Image(), new Image(), new Image(), new Image(), new Image()];
+bossImgs[0].src = 'png/boss1.png';
+bossImgs[1].src = 'png/boss2.png';
+bossImgs[2].src = 'png/boss3.png';
+bossImgs[3].src = 'png/boss4.png';
+bossImgs[4].src = 'png/boss5.png';
+let bossSpawnCount = 0;
+const dirtImg = new Image(); dirtImg.src = 'png/dirt.png';
+
+// ─── ALIEN SPAWNER ────────────────────────────────────────────
+const ALIEN_SPAWNER_CHECK_INTERVAL = 3 * 60; // check every 3s
+const ALIEN_SPAWN_RATE = 180; // frames between alien spawns per spawner
+const ALIEN_MAX_PER_SPAWNER = 4;
+const ALIEN_MAX_TOTAL = 20;
+const ALIEN_ROAM_RADIUS = 18; // tiles from spawner aliens will wander
+const ALIEN_SPAWNER_HP = 10;
+let alienSpawners = []; // { x, y, spawnTimer, hp, maxHp, defeated }
+let aliens = []; // { x, y, hp, maxHp, type, timer, speed, dmg, xp, homeX, homeY, curHp }
+let alienSpawnerCheckTimer = ALIEN_SPAWNER_CHECK_INTERVAL;
+const alienSpawnerImg = new Image(); alienSpawnerImg.src = 'png/alien_spawner.png';
+const alien1Img = new Image(); alien1Img.src = 'png/alien_1.png';
+const alien2Img = new Image(); alien2Img.src = 'png/alien_2.png';
+const mushroomImgs = Array.from({length: 7}, (_, i) => { const img = new Image(); img.src = `png/mushroom0${i+1}.png`; return img; });
+const treeImgs = [1, 2].map(i => { const img = new Image(); img.src = `png/tree_0${i}.png`; return img; });
+const barrenImgs = [1, 2].map(i => { const img = new Image(); img.src = `png/barren_0${i}.png`; return img; });
+const cactusImgs = [1, 2].map(i => { const img = new Image(); img.src = `png/cactus_0${i}.png`; return img; });
+const rockImgs = [1,2,3].map(i => { const img = new Image(); img.src = `png/rock_0${i}.png`; return img; });
+const fireGifPool = Array.from({length: 40}, () => {
+  const el = document.createElement('img');
+  el.src = 'gif/fire.gif';
+  el.style.cssText = 'display:none;position:fixed;pointer-events:none;z-index:2;image-rendering:pixelated;';
+  document.body.appendChild(el);
+  return el;
+});
+
+// ─── GRASSLANDS BIOME ──────────────────────────────────────────
+const grassImg = new Image(); grassImg.src = 'png/grass.png';
+const grassStompImg = new Image(); grassStompImg.src = 'png/grass_stomp.png';
+const grassEdgeImg = new Image(); grassEdgeImg.src = 'png/grass_edge.png';
+let stompedGrassTiles = new Map(); // tile key -> frameCount it was last stomped at
+const GRASS_REGROW_DURATION = 64 * 60; // 64 seconds for grass_stomp.png to fully regrow into grass.png
+
+// Pixel data for the stomp->grass dissolve, captured once both textures finish loading
+let grassPixelData = null; // { w, h, stompData, grassData, noise }
+function tryInitGrassRegrowData() {
+  if (grassPixelData) return;
+  if (!(grassImg.complete && grassImg.naturalWidth > 0 && grassStompImg.complete && grassStompImg.naturalWidth > 0)) return;
+  const w = grassStompImg.naturalWidth, h = grassStompImg.naturalHeight;
+  const tmp = document.createElement('canvas');
+  tmp.width = w; tmp.height = h;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(grassStompImg, 0, 0, w, h);
+  const stompData = tctx.getImageData(0, 0, w, h).data;
+  tctx.clearRect(0, 0, w, h);
+  tctx.drawImage(grassImg, 0, 0, w, h);
+  const grassData = tctx.getImageData(0, 0, w, h).data;
+  const noise = new Float32Array(w * h);
+  for (let i = 0; i < noise.length; i++) noise[i] = Math.random();
+  grassPixelData = { w, h, stompData, grassData, noise };
+}
+
+// Cache of blended regrow canvases, one per currently-regrowing tile. Recomputed at most
+// once per ~1s-worth of progress (64 discrete steps over GRASS_REGROW_DURATION) instead of
+// every frame, since a per-pixel blend is far too costly to redo 60 times a second.
+const regrowBlendCache = new Map(); // tile key -> { step, canvas }
+const GRASS_REGROW_STEPS = 64;
+function getRegrowingTileCanvas(key, progress) {
+  if (!grassPixelData) return null;
+  const step = Math.min(GRASS_REGROW_STEPS - 1, Math.floor(progress * GRASS_REGROW_STEPS));
+  const cached = regrowBlendCache.get(key);
+  if (cached && cached.step === step) return cached.canvas;
+  const { w, h, stompData, grassData, noise } = grassPixelData;
+  const threshold = step / (GRASS_REGROW_STEPS - 1);
+  const out = new Uint8ClampedArray(stompData.length);
+  for (let p = 0, px = 0; p < noise.length; p++, px += 4) {
+    const src = noise[p] <= threshold ? grassData : stompData;
+    out[px] = src[px]; out[px + 1] = src[px + 1]; out[px + 2] = src[px + 2]; out[px + 3] = src[px + 3];
+  }
+  const canvas = cached ? cached.canvas : document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').putImageData(new ImageData(out, w, h), 0, 0);
+  const entry = { step, canvas };
+  regrowBlendCache.set(key, entry);
+  return canvas;
+}
+
+const grassEdgeCache = {}; // memoized per-tile edge-detection result (biome() itself isn't cached)
+function isGrassEdgeTile(x, y) {
+  const key = k(x, y);
+  if (grassEdgeCache.hasOwnProperty(key)) return grassEdgeCache[key];
+  // A single-tile outline hugging the coastline — true only if an immediate neighbor
+  // (the surrounding ring of 8 tiles) isn't grasslands.
+  let isEdge = false;
+  for (let dy = -1; dy <= 1 && !isEdge; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      if (biome(x + dx, y + dy) !== "grasslands") { isEdge = true; break; }
+    }
+  }
+  grassEdgeCache[key] = isEdge;
+  return isEdge;
+}
+const FLOWER_TYPES = ["yellow", "pink", "blue"];
+const flowerGifSrcs = { yellow: 'gif/yellow_flower.gif', pink: 'gif/pink_flower.gif', blue: 'gif/blue_flower.gif' };
+const flowerStaticSrcs = {}; // frozen first-frame snapshot of each gif, shown when the player is far away
+FLOWER_TYPES.forEach(type => {
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      flowerStaticSrcs[type] = c.toDataURL();
+    } catch (e) { /* canvas capture unavailable — the gif will just always animate */ }
+  };
+  img.src = flowerGifSrcs[type];
+});
+// Real <img> pool so the flower GIFs can actually animate (canvas drawImage freezes GIFs on frame 1)
+const flowerGifPool = Array.from({length: 60}, () => {
+  const el = document.createElement('img');
+  el.style.cssText = 'display:none;position:fixed;pointer-events:none;z-index:3;image-rendering:pixelated;';
+  document.body.appendChild(el);
+  return el;
+});
+
+// ─── FENCED COMPOUND (grasslands-only structure) ────────────────
+const axerImg = new Image(); axerImg.src = 'png/axer.png';
+const houseImg = new Image(); houseImg.src = 'png/house.png';
+const FENCE_COMPOUND_SIZE = 16; // full 16x16 footprint, iron perimeter + one door tile
+const HOUSE_SIZE = 8; // 8x8 footprint, placed against the wall opposite the door
+let fenceCompounds = []; // holds at most one: { x, y, size, house: {x,y,size}, axer: {...}, wanderBounds }
+let showAxerArrow = false; // toggled by the N key — points at the axer from anywhere on the map
+let hasKey = false; // earned by beating the mini-game after Axer's challenge
+let axerDialogCooldown = 0; // frames of grace after the dialog closes before it can trigger again
+let miniGameFromAxer = false; // was the currently-open mini-game launched via Axer's challenge?
+
+function showAxerDialog() {
+  paused = true;
+  document.getElementById("bgMusic").pause();
+  document.getElementById("axerDialog").style.display = "flex";
+}
+
+function closeAxerDialog(accepted) {
+  document.getElementById("axerDialog").style.display = "none";
+  axerDialogCooldown = 120;
+  if (accepted) {
+    miniGameFromAxer = true;
+    openMiniGame();
+    return;
+  }
+  paused = false;
+  document.getElementById("bgMusic").play().catch(() => {});
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  loop();
+}
+
+function canPlaceFenceCompoundAt(ax, ay) {
+  for (let dy = 0; dy < FENCE_COMPOUND_SIZE; dy++) {
+    for (let dx = 0; dx < FENCE_COMPOUND_SIZE; dx++) {
+      const tx = ax + dx, ty = ay + dy;
+      if (getTileRaw(tx, ty) !== undefined) return false;
+      if (biome(tx, ty) !== "grasslands") return false;
+    }
+  }
+  return true;
+}
+
+function spawnFenceCompoundAt(ax, ay) {
+  const size = FENCE_COMPOUND_SIZE;
+  const perimeterTiles = [];
+  for (let i = 1; i < size - 1; i++) {
+    perimeterTiles.push({x: ax + i, y: ay});
+    perimeterTiles.push({x: ax + i, y: ay + size - 1});
+    perimeterTiles.push({x: ax, y: ay + i});
+    perimeterTiles.push({x: ax + size - 1, y: ay + i});
+  }
+  const doorTile = perimeterTiles[Math.floor(Math.random() * perimeterTiles.length)];
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      const tx = ax + dx, ty = ay + dy;
+      const onBorder = dx === 0 || dy === 0 || dx === size - 1 || dy === size - 1;
+      if (onBorder) {
+        map[k(tx, ty)] = (tx === doorTile.x && ty === doorTile.y) ? "door" : "iron";
+      } else {
+        // Pre-claim the interior so getTile() never rolls a flower/rock decoration here
+        map[k(tx, ty)] = 0;
+      }
+    }
+  }
+
+  // Interior bounds (inclusive)
+  const ix0 = ax + 1, ix1 = ax + size - 2;
+  const iy0 = ay + 1, iy1 = ay + size - 2;
+  const hs = HOUSE_SIZE;
+
+  // House goes against the wall opposite the door, centered on the other axis
+  let hx, hy;
+  const wanderBounds = { minX: ix0, maxX: ix1, minY: iy0, maxY: iy1 };
+  if (doorTile.y === ay) { // door on top wall -> house against bottom
+    hx = ix0 + Math.floor((ix1 - ix0 + 1 - hs) / 2);
+    hy = iy1 - hs + 1;
+    wanderBounds.maxY = hy - 1;
+  } else if (doorTile.y === ay + size - 1) { // door on bottom -> house against top
+    hx = ix0 + Math.floor((ix1 - ix0 + 1 - hs) / 2);
+    hy = iy0;
+    wanderBounds.minY = hy + hs;
+  } else if (doorTile.x === ax) { // door on left -> house against right
+    hy = iy0 + Math.floor((iy1 - iy0 + 1 - hs) / 2);
+    hx = ix1 - hs + 1;
+    wanderBounds.maxX = hx - 1;
+  } else { // door on right -> house against left
+    hy = iy0 + Math.floor((iy1 - iy0 + 1 - hs) / 2);
+    hx = ix0;
+    wanderBounds.minX = hx + hs;
+  }
+
+  // Stamp the house footprint — blocks movement like a rock (see "house"/"house_sub" checks)
+  for (let dy = 0; dy < hs; dy++) {
+    for (let dx = 0; dx < hs; dx++) {
+      map[k(hx + dx, hy + dy)] = (dx === 0 && dy === 0) ? "house" : "house_sub";
+    }
+  }
+
+  // Inset the wander area so the axer's (larger than one tile) sprite can't visually
+  // overhang into the fence or the house — keep at least a 2-tile-wide strip either way.
+  const AXER_VISUAL_MARGIN = 1;
+  if (wanderBounds.maxX - wanderBounds.minX > AXER_VISUAL_MARGIN * 2) {
+    wanderBounds.minX += AXER_VISUAL_MARGIN; wanderBounds.maxX -= AXER_VISUAL_MARGIN;
+  }
+  if (wanderBounds.maxY - wanderBounds.minY > AXER_VISUAL_MARGIN * 2) {
+    wanderBounds.minY += AXER_VISUAL_MARGIN; wanderBounds.maxY -= AXER_VISUAL_MARGIN;
+  }
+
+  const cx = Math.round((wanderBounds.minX + wanderBounds.maxX) / 2);
+  const cy = Math.round((wanderBounds.minY + wanderBounds.maxY) / 2);
+  fenceCompounds.push({
+    x: ax, y: ay, size,
+    house: { x: hx, y: hy, size: hs },
+    wanderBounds,
+    axer: { x: cx, y: cy, timer: 30 }
+  });
+}
+
+// Places the single fenced compound once, at game start, in the nearest patch of grasslands
+// to spawn — spirals outward ring by ring from the origin until a clear 16x16 spot is found.
+function placeFenceCompoundNearSpawn() {
+  if (fenceCompounds.length > 0) return;
+  const half = Math.floor(FENCE_COMPOUND_SIZE / 2);
+  for (let radius = 0; radius <= 400; radius += 4) {
+    const steps = Math.max(8, radius);
+    for (let i = 0; i < steps; i++) {
+      const angle = (i / steps) * Math.PI * 2;
+      const cx = Math.round(Math.cos(angle) * radius);
+      const cy = Math.round(Math.sin(angle) * radius);
+      const ax = cx - half, ay = cy - half;
+      if (canPlaceFenceCompoundAt(ax, ay)) {
+        spawnFenceCompoundAt(ax, ay);
+        return;
+      }
+    }
+  }
+}
+
+// ─── YELLOW KEY FENCE (far away, only passable once the key is earned) ─────
+const castleImg = new Image(); castleImg.src = 'png/castle.png';
+const YELLOW_FENCE_SIZE = 16;
+const CASTLE_SIZE = 12; // bulk of the 14x14 interior, leaving a 1-tile walkway all around
+let keyFence = null; // { x, y, size } — x,y is the top-left anchor, null until the key is earned
+
+function canPlaceYellowFenceAt(ax, ay) {
+  for (let dy = 0; dy < YELLOW_FENCE_SIZE; dy++) {
+    for (let dx = 0; dx < YELLOW_FENCE_SIZE; dx++) {
+      if (getTileRaw(ax + dx, ay + dy) !== undefined) return false;
+    }
+  }
+  return true;
+}
+
+function spawnYellowFenceAt(ax, ay) {
+  const size = YELLOW_FENCE_SIZE;
+  for (let dy = 0; dy < size; dy++) {
+    for (let dx = 0; dx < size; dx++) {
+      const onBorder = dx === 0 || dy === 0 || dx === size - 1 || dy === size - 1;
+      if (onBorder) map[k(ax + dx, ay + dy)] = "yellow_block";
+    }
+  }
+
+  // Castle takes up the bulk of the interior, centered — solid, blocks movement like a rock
+  const ix0 = ax + 1, ix1 = ax + size - 2;
+  const iy0 = ay + 1, iy1 = ay + size - 2;
+  const cs = CASTLE_SIZE;
+  const castleX = ix0 + Math.floor((ix1 - ix0 + 1 - cs) / 2);
+  const castleY = iy0 + Math.floor((iy1 - iy0 + 1 - cs) / 2);
+  for (let dy = 0; dy < cs; dy++) {
+    for (let dx = 0; dx < cs; dx++) {
+      map[k(castleX + dx, castleY + dy)] = (dx === 0 && dy === 0) ? "castle" : "castle_sub";
+    }
+  }
+
+  keyFence = { x: ax, y: ay, size, castle: { x: castleX, y: castleY, size: cs } };
+}
+
+// Placed the moment the key is earned, far out on the map — practically guaranteed to be
+// unclaimed ground out there, so no need for the closest-spot search the axer compound uses.
+function placeYellowFenceFarAway() {
+  if (keyFence) return;
+  const half = Math.floor(YELLOW_FENCE_SIZE / 2);
+  const distance = 800 + Math.floor(Math.random() * 400);
+  const angle = Math.random() * Math.PI * 2;
+  let ax = Math.round(Math.cos(angle) * distance) - half;
+  let ay = Math.round(Math.sin(angle) * distance) - half;
+  let tries = 0;
+  while (!canPlaceYellowFenceAt(ax, ay) && tries < 20) { ax += YELLOW_FENCE_SIZE; tries++; }
+  spawnYellowFenceAt(ax, ay);
+}
+
+function updateFenceCompounds() {
+  if (axerDialogCooldown > 0) axerDialogCooldown--;
+  for (const fc of fenceCompounds) {
+    const a = fc.axer;
+    if (!hasKey && axerDialogCooldown <= 0 && a.x === player.x && a.y === player.y) {
+      showAxerDialog();
+      return;
+    }
+    a.timer--;
+    if (a.timer <= 0) {
+      a.timer = 40 + Math.floor(Math.random() * 40);
+      const wb = fc.wanderBounds;
+      a.x = Math.min(wb.maxX, Math.max(wb.minX, a.x + Math.floor(Math.random() * 3) - 1));
+      a.y = Math.min(wb.maxY, Math.max(wb.minY, a.y + Math.floor(Math.random() * 3) - 1));
+    }
+  }
+}
+
+const skullImg  = new Image(); skullImg.src  = 'png/emoji_skull.png';
+const skull2Img = new Image(); skull2Img.src = 'png/emoji_skull_2.png';
+const skull3Img = new Image(); skull3Img.src = 'png/emoji_skull_3.png';
+const skull4Img = new Image(); skull4Img.src = 'png/emoji_skull_4.png';
+const skullImgs = [skullImg, skull2Img, skull3Img, skull4Img];
+const rageIconImg = new Image(); rageIconImg.src = 'png/rage_icon.png';
+const playerImg = new Image(); playerImg.src = 'png/bossfavicon.png';
+// ─── SKINS ────────────────────────────────────────────────────
+let selectedSkin = 'png/bossfavicon.png';
+const skinImgs = {};
+['png/bossfavicon.png','png/fire_bossfavicon.png','png/pirate_bossfavicon.png','png/she_bossfavicon.png','png/gold_bossfavicon.png','png/purple_bossfavicon.png','png/blue_bossfavicon.png','png/ghost_bossfavicon.png','png/whiterabbit_bossfavicon.png','png/santa_bossfavicon.png','png/coolguy_bossfavicon.png'].forEach(s => {
+  skinImgs[s] = new Image(); skinImgs[s].src = s;
+});
 
 const RAGE_DURATION = 10 * 60;
 const RAGE_PICKUP_SPAWN_INTERVAL = 40 * 60;
+let activeFires = []; // { x, y, ttl }
 let ragePickups = [];
 let rageTimer = 0;
 let ragePickupSpawn = RAGE_PICKUP_SPAWN_INTERVAL;
@@ -289,12 +1089,31 @@ let purplePickups = [];
 let purpleTimer = 0;
 let purpleStored = false;
 let purplePickupSpawn = PURPLE_ELEC_SPAWN_INTERVAL;
-const purpleIconImg = new Image(); purpleIconImg.src = 'purple_electric.png';
+const purpleIconImg = new Image(); purpleIconImg.src = 'png/purple_electric.png';
 
 const WRENCH_SPAWN_INTERVAL = 50 * 60;
 let wrenchPickups = [];
 let wrenchPickupSpawn = WRENCH_SPAWN_INTERVAL;
-const wrenchIconImg = new Image(); wrenchIconImg.src = 'wrench.png';
+const wrenchIconImg = new Image(); wrenchIconImg.src = 'png/wrench.png';
+
+// ─── 2X CLONE ─────────────────────────────────────────────────
+const CLONE_2X_SPAWN_INTERVAL = 55 * 60;
+const CLONE_2X_LIFETIME = 60 * 60; // 1 minute
+const CLONE_2X_MOVE_RATE = 15;
+const CLONE_2X_SHOOT_RATE = 35;
+let clone2xPickups = [];
+let clone2xPickupSpawn = CLONE_2X_SPAWN_INTERVAL;
+let activeClone = null; // { x, y, lifetime, moveTimer, shootTimer }
+const clone2xIconImg = new Image(); clone2xIconImg.src = 'png/2x_icon.png';
+
+// ─── BAIT ─────────────────────────────────────────────────────
+const BAIT_SPAWN_INTERVAL = 60 * 60;
+const BAIT_DURATION = 20 * 60;
+let baitPickups = [];
+let baitPickupSpawn = BAIT_SPAWN_INTERVAL;
+let activeBaits = []; // { x, y, timer } placed on board
+const baitIconImg = new Image(); baitIconImg.src = 'png/bait_icon.png';
+const baitImg = new Image(); baitImg.src = 'png/bait.png';
 
 const RAINBOW_SPAWN_INTERVAL = 110 * 60;
 let rainbowPickups = [];
@@ -302,28 +1121,89 @@ let rainbowPickupSpawn = RAINBOW_SPAWN_INTERVAL;
 let rainbowFlicker = 0;
 const RAINBOW_FLICKER_DURATION = 90;
 let rainbowSpawnSuppressTimer = 0;
-const rainbowIconImg = new Image(); rainbowIconImg.src = 'rainbow.png';
+const rainbowIconImg = new Image(); rainbowIconImg.src = 'png/rainbow.png';
+
+// ─── MYSTERY POWERUP STATE ────────────────────────────────────
+const MYSTERY_SPAWN_INTERVAL = 110 * 60; // same as rainbow
+const MYSTERY_SWAP_RATE = 30; // frames per swap (0.5s at 60fps)
+let mysteryPickups = []; // { x, y, ttl, swapTimer, iconIdx }
+let mysteryPickupSpawn = MYSTERY_SPAWN_INTERVAL;
+const MYSTERY_ICONS = ['png/rage_icon.png', 'png/purple_electric.png', 'png/rainbow.png', 'png/wrench.png'];
+const mysteryIconImgs = MYSTERY_ICONS.map((src, i) => {
+  const img = new Image(); img.src = src; return img;
+});
 
 const DEMON_SPAWN_INTERVAL = 45 * 60;
-const DEMON_MAX = 3;
+const DEMON_MAX = 1;
 const DEMON_HP = 20;
 const DEMON_FLEE_RADIUS = 4;
 const DEMON_SHOOT_RATE = 90;
 let demons = [];
 let demonSpawnTimer = DEMON_SPAWN_INTERVAL;
-const demonImg = new Image(); demonImg.src = 'demon.png';
-const fireballImg = new Image(); fireballImg.src = 'fireball.png';
+const demonImg = new Image(); demonImg.src = 'png/demon.png';
+const fireballImg = new Image(); fireballImg.src = 'png/fireball.png';
 let fireballs = [];
+
+// ─── CORRUPTED HEART ───────────────────────────────────────────
+// Spawns in the boss rotation, right after the dragon (boss5) — see spawnNextBossOrHeart()
+const CORRUPTED_HEART_HP = DEMON_HP * 2 * 20;
+const CORRUPTED_HEART_TILE_SPAN = 8; // planted footprint, like a large tree sprite
+const CORRUPTED_MINION_SPAWN_RATE = 100;
+const CORRUPTED_MINION_MAX_PER_HEART = 6;
+let corruptedHearts = [];
+let corruptedMinions = [];
+// Regular enemies also turn corrupted (inverted colors) and leave inverted tile trails
+// while any Corrupted Heart is alive; cleared the moment the last one is defeated.
+let globalInvertedTiles = new Set();
+// Animated GIFs only play when they're a real <img> in the DOM — drawImage() onto canvas
+// freezes them on frame 1 — so the heart is layered on top of the canvas like the fire pool.
+const corruptedHeartGifPool = Array.from({length: 5}, () => {
+  const el = document.createElement('img');
+  el.src = 'gif/corrupted_heart.gif';
+  el.style.cssText = 'display:none;position:fixed;pointer-events:none;z-index:2;image-rendering:pixelated;filter:drop-shadow(0 0 16px #ff0066);';
+  document.body.appendChild(el);
+  return el;
+});
+const corruptedSquidImg = new Image(); corruptedSquidImg.src = 'png/corrupted_squid.png';
+const corruptedSharkImg = new Image(); corruptedSharkImg.src = 'png/corrupted_shark.png';
+const corruptedCrabImg = new Image(); corruptedCrabImg.src = 'png/corrupted_crab.png';
+const corruptedVampireImg = new Image(); corruptedVampireImg.src = 'png/corrupted_vampire.png';
+const corruptedDragonImg = new Image(); corruptedDragonImg.src = 'png/corrupted_dragon.png';
+// Index-matched to bossImgs (squid, shark, crab, vampire, dragon) — each minion is the
+// corrupted twin of that boss, and is rendered at that boss's same size.
+const corruptedMinionImgs = [corruptedSquidImg, corruptedSharkImg, corruptedCrabImg, corruptedVampireImg, corruptedDragonImg];
+// Minions take 3 hits to kill, move at the dragon boss's speed, and ignore all obstacles
+// that would normally block an enemy.
+const CORRUPTED_MINION_HITS = 3;
+const CORRUPTED_MINION_STATS = [
+  { dmg: 8,  xp: 4 }, // squid
+  { dmg: 10, xp: 5 }, // shark
+  { dmg: 8,  xp: 4 }, // crab
+  { dmg: 10, xp: 5 }, // vampire
+  { dmg: 14, xp: 7 }, // dragon
+];
 
 let _deadPlayed = false;
 
 // ─── COOKIE: BEST SCORE ──────────────────────────────────────
+let _bestScoreCache = null;
+
 function getBestScore() {
-  const match = document.cookie.match(/bestScore=(\d+)/);
-  return match ? parseInt(match[1]) : 0;
+  if (_bestScoreCache === null) {
+    const match = document.cookie.match(/bestScore=(\d+)/);
+    _bestScoreCache = match ? parseInt(match[1]) : 0;
+  }
+  return _bestScoreCache;
 }
 function saveBestScore(s) {
+  _bestScoreCache = s;
   document.cookie = `bestScore=${s}; max-age=31536000; path=/`;
+}
+
+function playOuch() {
+  const s = document.getElementById("ouchSound");
+  s.currentTime = 0;
+  s.play().catch(() => {});
 }
 
 function resize() {
@@ -332,16 +1212,32 @@ function resize() {
   ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener("resize", resize); resize();
+canvas.addEventListener("touchstart", e => { if (tabletMode) e.preventDefault(); }, { passive: false });
+canvas.addEventListener("touchmove", e => { if (tabletMode) e.preventDefault(); }, { passive: false });
 
 const k = (x, y) => `${x},${y}`;
-function setTile(x, y, v) { map[k(x, y)] = v; }
+
+function setTile(x, y, v) {
+  map[k(x, y)] = v;
+  if (v === "🍄") checkMushroomSpawner(x, y);
+}
 function getTileRaw(x, y) { return map[k(x, y)]; }
 
 function biome(x, y) {
-  const v = Math.sin(x * 0.01) + Math.cos(y * 0.01);
-  if (v > 1)    return "forest";
-  if (v > 0.3)  return "plains";
-  if (v > -0.3) return "pine";
+  // Smooth, low-frequency wobble (large wavelength, not per-tile noise) so borders ripple
+  // like a natural coastline instead of a perfectly smooth curve — and, critically, instead
+  // of fragmenting into salt-and-pepper pixel noise the way per-tile jitter did.
+  const wobble = Math.sin(x * 0.05 + y * 0.08) * 0.25 + Math.cos(x * 0.03 - y * 0.06) * 0.25;
+  const v = Math.sin(x * 0.01) + Math.cos(y * 0.01) + wobble;
+  if (v > 1.25) return "forest";
+  if (v > 0.25) {
+    // Grasslands never appears near the spawn point — it should be a surprise the player
+    // stumbles onto while exploring, not the biome they start in.
+    if (Math.hypot(x, y) < 70) return "plains";
+    return "grasslands";
+  }
+  if (v > 0)    return "plains";
+  if (v > -0.5) return "pine";
   if (v > -1)   return "mushroom";
   return "desert";
 }
@@ -354,11 +1250,83 @@ function getTile(x, y) {
   if (Math.random() < 0.002) {
     tile = "lava"; spawnPoints.push({ x, y });
   } else {
-    if      (b === "forest"   && Math.random() < 0.08) tile = "🌳";
-    else if (b === "pine"     && Math.random() < 0.08) tile = "🌲";
-    else if (b === "desert"   && Math.random() < 0.06) tile = "🌵";
+    if      (b === "forest"   && Math.random() < 0.08) {
+      let ok = true;
+      outerT: for (let dy = 0; dy < 4; dy++) {
+        for (let dx = 0; dx < 4; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const raw = getTileRaw(x + dx, y + dy);
+          if (raw !== undefined && raw !== 0) { ok = false; break outerT; }
+        }
+      }
+      if (ok) {
+        tile = "🌳";
+        for (let dy = 0; dy < 4; dy++)
+          for (let dx = 0; dx < 4; dx++)
+            if (dx !== 0 || dy !== 0) map[k(x + dx, y + dy)] = "tree_sub";
+      }
+    }
+    else if (b === "pine"     && Math.random() < 0.08) {
+      let ok = true;
+      outerP: for (let dy = 0; dy < 4; dy++) {
+        for (let dx = 0; dx < 4; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const raw = getTileRaw(x + dx, y + dy);
+          if (raw !== undefined && raw !== 0) { ok = false; break outerP; }
+        }
+      }
+      if (ok) {
+        tile = "🌲";
+        for (let dy = 0; dy < 4; dy++)
+          for (let dx = 0; dx < 4; dx++)
+            if (dx !== 0 || dy !== 0) map[k(x + dx, y + dy)] = "barren_sub";
+      }
+    }
+    else if (b === "desert"   && Math.random() < 0.06) {
+      let ok = true;
+      outerC: for (let dy = 0; dy < 4; dy++) {
+        for (let dx = 0; dx < 4; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const raw = getTileRaw(x + dx, y + dy);
+          if (raw !== undefined && raw !== 0) { ok = false; break outerC; }
+        }
+      }
+      if (ok) {
+        tile = "🌵";
+        for (let dy = 0; dy < 4; dy++)
+          for (let dx = 0; dx < 4; dx++)
+            if (dx !== 0 || dy !== 0) map[k(x + dx, y + dy)] = "cactus_sub";
+      }
+    }
     else if (b === "mushroom" && Math.random() < 0.07) tile = "🍄";
+    else if (b === "grasslands") {
+      const roll = Math.random();
+      if      (roll < 0.02)  tile = "grass_rock";
+      else if (roll < 0.035) tile = "flower_yellow";
+      else if (roll < 0.05)  tile = "flower_pink";
+      else if (roll < 0.065) tile = "flower_blue";
+    }
     else if (Math.random() < 0.04) tile = "🪨";
+  }
+  if (tile === 0) {
+    let h = ((x * 374761393 + y * 1120483693) >>> 0);
+    h = ((h ^ (h >>> 13)) * 1274126177) >>> 0;
+    if (h % 4000 === 0) {
+      let ok = true;
+      outer: for (let dy = 0; dy < 4; dy++) {
+        for (let dx = 0; dx < 4; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const raw = getTileRaw(x + dx, y + dy);
+          if (raw !== undefined && raw !== 0) { ok = false; break outer; }
+        }
+      }
+      if (ok) {
+        tile = "rock_lg";
+        for (let dy = 0; dy < 4; dy++)
+          for (let dx = 0; dx < 4; dx++)
+            if (dx !== 0 || dy !== 0) map[k(x + dx, y + dy)] = "rock_sub";
+      }
+    }
   }
   map[key] = tile;
   return tile;
@@ -428,11 +1396,23 @@ function spawnStructure(type) {
 document.addEventListener("keydown", e => {
   keys[e.key.toLowerCase()] = true;
   if (e.key.toLowerCase() === "m") {
-    const music = document.getElementById("bgMusic");
-    const deadSound = document.getElementById("deadSound");
-    const muted = !music.muted;
-    music.muted = muted;
-    deadSound.muted = muted;
+    const muted = !document.getElementById("deadSound").muted;
+    document.getElementById("bgMusic").muted = muted;
+    document.getElementById("rageSound").muted = muted;
+    document.getElementById("wrenchSound").muted = muted;
+    document.getElementById("rainbowSound").muted = muted;
+    document.getElementById("deadSound").muted = muted;
+    document.getElementById("ouchSound").muted = muted;
+    document.getElementById("purpleSound").muted = muted;
+    document.getElementById("shootSound").muted = muted;
+    document.getElementById("fireAtNightSound").muted = muted;
+  }
+  if (e.key.toLowerCase() === "n" && gameStarted) {
+    showAxerArrow = !showAxerArrow;
+    if (!showAxerArrow) document.getElementById("axerArrow").style.display = "none";
+  }
+  if (e.key.toLowerCase() === "l" && gameStarted) {
+    openMiniGame();
   }
 });
 document.addEventListener("keyup", e => {
@@ -441,6 +1421,32 @@ document.addEventListener("keyup", e => {
     player.moveHeld = false; player.moveDelay = 0;
   }
 });
+
+(function initTouchControls() {
+  const allBtns = document.querySelectorAll("#touchDpad button, #touchActions button");
+  const moveKeys = new Set(["w","a","s","d"]);
+  allBtns.forEach(btn => {
+    const key = btn.dataset.key;
+    function press(e) {
+      e.preventDefault();
+      keys[key] = true;
+      btn.classList.add("pressed");
+    }
+    function release(e) {
+      e.preventDefault();
+      keys[key] = false;
+      btn.classList.remove("pressed");
+      if (moveKeys.has(key)) { player.moveHeld = false; player.moveDelay = 0; }
+    }
+    btn.addEventListener("touchstart", press, { passive: false });
+    btn.addEventListener("touchend", release, { passive: false });
+    btn.addEventListener("touchcancel", release, { passive: false });
+    btn.addEventListener("mousedown", press);
+    btn.addEventListener("mouseup", release);
+    btn.addEventListener("mouseleave", release);
+    btn.addEventListener("contextmenu", e => e.preventDefault());
+  });
+})();
 
 function handleMovement() {
   if (player.hp <= 0) return;
@@ -452,21 +1458,35 @@ function handleMovement() {
   if (dx === 0 && dy === 0) { player.moveHeld = false; return; }
   const nx = player.x + dx, ny = player.y + dy;
   const nt = getTile(nx, ny);
-  if (nt === "iron" || nt === "🪨") return;
+  if (nt === "iron" || nt === "🪨" || nt === "rock_lg" || nt === "rock_sub" || nt === "grass_rock" || nt === "house" || nt === "house_sub" || nt === "castle" || nt === "castle_sub") return;
+  if (nt === "yellow_block" && !hasKey) return;
   if (!player.moveHeld) {
     player.x += dx; player.y += dy;
     player.moveHeld = true; player.moveDelay = player.moveSpeed;
-    if (getTile(player.x, player.y) === "lava" && player.invincible <= 0) {
-      player.hp -= 10; player.invincible = 30; shakeTimer = 15;
+    stompGrass();
+    if ((getTile(player.x, player.y) === "lava" || getTile(player.x, player.y) === "🔥") && player.invincible <= 0) {
+      player.hp -= 10; player.invincible = 30; shakeTimer = 15; playOuch();
     }
     return;
   }
   player.moveDelay--;
   if (player.moveDelay <= 0) {
     player.x += dx; player.y += dy; player.moveDelay = 2;
-    if (getTile(player.x, player.y) === "lava" && player.invincible <= 0) {
-      player.hp -= 10; player.invincible = 30; shakeTimer = 15;
+    stompGrass();
+    if ((getTile(player.x, player.y) === "lava" || getTile(player.x, player.y) === "🔥") && player.invincible <= 0) {
+      player.hp -= 10; player.invincible = 30; shakeTimer = 15; playOuch();
     }
+  }
+}
+
+const FLOWER_STOMP_COLORS = { flower_yellow: "#ffee44", flower_pink: "#ff88cc", flower_blue: "#66aaff" };
+function stompGrass() {
+  if (biome(player.x, player.y) !== "grasslands") return;
+  if (!isGrassEdgeTile(player.x, player.y)) stompedGrassTiles.set(k(player.x, player.y), frameCount);
+  const t = getTile(player.x, player.y);
+  if (FLOWER_STOMP_COLORS[t]) {
+    spawnParticles(player.x, player.y, FLOWER_STOMP_COLORS[t], 8, 1.5);
+    setTile(player.x, player.y, 0);
   }
 }
 
@@ -479,21 +1499,50 @@ function handleActions() {
   if (keys["u"]) setTile(x, y, "🍄");
   if (keys["t"]) setTile(x, y, "iron");
   if (keys["g"]) setTile(x, y, "door");
+  if (keys["f"]) {
+    const isNight = dayTime > 0.45 && dayTime < 0.95;
+    if (isNight) {
+      showToast("🤖 OH NO!!! I can't get the fire started at night! 🤖", 7000, true);
+      const fan = document.getElementById("fireAtNightSound");
+      fan.currentTime = 0; fan.play().catch(() => {});
+      keys["f"] = false;
+    } else {
+      if (activeFires.length < 20) {
+        setTile(x, y, "🔥");
+        activeFires.push({ x, y, ttl: 30 * 60 });
+      }
+      keys["f"] = false;
+    }
+  }
   if (keys["h"]) { setTile(x, y, "lava"); spawnPoints.push({ x, y }); }
-  if (keys["z"] && !actionCooldown["bossSpawn"]) {
+  if (keys["z"] && !actionCooldown["bossSpawn"] && !peacefulMode) {
     const angle = Math.random() * Math.PI * 2;
     const dist = 12 + Math.floor(Math.random() * 6);
     const bX = player.x + Math.round(Math.cos(angle) * dist);
     const bY = player.y + Math.round(Math.sin(angle) * dist);
-    const bHp = 40 + level * 5;
-    bosses.push({ x: bX, y: bY, hp: bHp, maxHp: bHp, timer: 0, facingRight: false });
-    spawnParticles(bX, bY, "#ff0000", 25, 3);
+    const spawnedHeart = spawnNextBossOrHeart(bX, bY);
     spawnParticles(player.x, player.y, "#ff4400", 10, 2);
     showBossAlert();
-    showToast("😈 BOSS SUMMONED!");
+    if (!spawnedHeart) showToast("😈 BOSS SUMMONED!");
     shakeTimer = 20;
     actionCooldown["bossSpawn"] = 120;
-    keys["w"] = false;
+    keys["z"] = false;
+  }
+  if (keys["x"] && !actionCooldown["demonSpawn"] && !peacefulMode) {
+    if (demons.length < DEMON_MAX) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 12 + Math.floor(Math.random() * 6);
+      const dX = player.x + Math.round(Math.cos(angle) * dist);
+      const dY = player.y + Math.round(Math.sin(angle) * dist);
+      spawnDemonAt(dX, dY);
+      spawnParticles(dX, dY, "#ff4400", 20, 3);
+      showToast("😈 DEMON SUMMONED!");
+      shakeTimer = 15;
+    } else {
+      showToast("👿 MAX DEMONS REACHED!");
+    }
+    actionCooldown["demonSpawn"] = 120;
+    keys["x"] = false;
   }
   if (keys[" "] && !actionCooldown["spaceUsed"]) {
     if (purpleStored && purpleTimer <= 0 && rageTimer <= 0) {
@@ -501,17 +1550,23 @@ function handleActions() {
       purpleStored = false;
       spawnParticles(player.x, player.y, "#cc44ff", 20, 3);
       showToast("⚡ PURPLE STORM!");
+      const ps = document.getElementById("purpleSound");
+      ps.currentTime = 0; ps.play().catch(() => {});
     } else if (rageStored && rageTimer <= 0 && purpleTimer <= 0) {
       rageTimer = RAGE_DURATION;
       rageStored = false;
       spawnParticles(player.x, player.y, "#ff4400", 20, 3);
       showToast("😡 RAGE ACTIVATED!");
+      const rs = document.getElementById("rageSound");
+      rs.currentTime = 0; rs.play().catch(() => {});
     } else if (rageTimer <= 0 && purpleTimer <= 0) {
       const dirs = [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
       for (const [dx, dy] of dirs)
         projectiles.push({ x: player.x, y: player.y, dx, dy, dist: 0, type: "lightning" });
       spawnParticles(player.x, player.y, "#88ffff", 12, 2);
       actionCooldown["lightning"] = 20;
+      const ss = document.getElementById("shootSound");
+      ss.currentTime = 0; ss.play().catch(() => {});
     }
     actionCooldown["spaceUsed"] = 15;
     keys[" "] = false;
@@ -525,19 +1580,55 @@ const ENEMY_TYPES = [
   { emoji: "💀", speed: 25, dmg: 10, hp: 3, xp: 5, night: true  },
 ];
 
+function updateFires() {
+  for (let i = activeFires.length - 1; i >= 0; i--) {
+    const f = activeFires[i];
+    f.ttl--;
+    if (f.ttl <= 0) {
+      if (getTile(f.x, f.y) === "🔥") setTile(f.x, f.y, 0);
+      activeFires.splice(i, 1);
+    }
+  }
+  const available = 20 - activeFires.length;
+  hudFireChargeVal.textContent = available + "/20";
+  hudFireChargeVal.style.color = available === 0 ? "#ff2200" : available <= 5 ? "#ff8800" : "#ff6600";
+}
+
 function updateEnemies() {
+  if (peacefulMode) return;
   const isNight = dayTime > 0.45 && dayTime < 0.95;
   const spawnRate = isNight ? 0.06 : 0.025;
-  const maxEnemies = isNight ? 35 + level * 2 : 20 + level;
+  const maxEnemies = 20;
   if (enemies.length < maxEnemies && Math.random() < spawnRate && spawnPoints.length > 0 && rainbowSpawnSuppressTimer <= 0) {
     const s = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
     const pool = isNight ? ENEMY_TYPES : ENEMY_TYPES.filter(e => !e.night);
     const type = pool[Math.floor(Math.random() * pool.length)];
-    enemies.push({ x: s.x, y: s.y, ...type, timer: 0, curHp: type.hp });
+    enemies.push({ x: s.x, y: s.y, ...type, timer: 0, curHp: type.hp, skullIdx: Math.floor(Math.random() * 4) });
   }
+  const enemyOccupied = new Set(enemies.map(e => k(e.x, e.y)));
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (player.hp <= 0) continue;
+
+    // Fire tile — check before movement so fire isn't cleared first
+    if (getTile(e.x, e.y) === "🔥" && e.curHp <= 2) {
+      spawnParticles(e.x, e.y, "#ff6600", 8, 2);
+      spawnParticles(e.x, e.y, "#ffcc00", 4, 1.5);
+      xp += e.xp; score += e.xp * 10;
+      setTile(e.x, e.y, 0);
+      enemyOccupied.delete(k(e.x, e.y));
+      enemies.splice(i, 1);
+      checkLevelUp();
+      continue;
+    }
+
+    const distToPlayer = Math.abs(e.x - player.x) + Math.abs(e.y - player.y);
+    if (distToPlayer > 40) {
+      enemyOccupied.delete(k(e.x, e.y));
+      enemies.splice(i, 1);
+      continue;
+    }
+
     e.timer--;
     if (e.timer <= 0) {
       e.timer = e.speed;
@@ -546,14 +1637,21 @@ function updateEnemies() {
       for (const [ndx, ndy] of [[dx, dy],[dx, 0],[0, dy]]) {
         const nx = e.x + ndx, ny = e.y + ndy;
         const tile = getTile(nx, ny);
-        if (tile === "iron" || tile === "door") continue;
-        if (tile !== 0 && tile !== "lava") setTile(nx, ny, 0);
-        e.x = nx; e.y = ny; moved = true; break;
+        if (tile === "iron" || tile === "door" || tile === "rock_lg" || tile === "rock_sub" || tile === "grass_rock" || tile === "house" || tile === "house_sub" || tile === "yellow_block" || tile === "castle" || tile === "castle_sub") continue;
+        if (enemyOccupied.has(k(nx, ny))) continue;
+        // Don't clear fire tiles — let enemies step onto them instead
+        if (tile !== 0 && tile !== "lava" && tile !== "🔥" && tile !== "🌳" && tile !== "tree_sub" && tile !== "🌲" && tile !== "barren_sub" && tile !== "🌵" && tile !== "cactus_sub" && tile !== "flower_yellow" && tile !== "flower_pink" && tile !== "flower_blue") setTile(nx, ny, 0);
+        enemyOccupied.delete(k(e.x, e.y));
+        enemyOccupied.add(k(nx, ny));
+        e.x = nx; e.y = ny; moved = true;
+        if (corruptedHearts.length > 0) globalInvertedTiles.add(k(nx, ny));
+        break;
       }
       if (e.x === player.x && e.y === player.y && player.invincible <= 0) {
         player.hp -= e.dmg;
         player.invincible = 20;
         shakeTimer = 10;
+        playOuch();
       }
     }
   }
@@ -621,6 +1719,110 @@ function updateWrench() {
       spawnParticles(player.x, player.y, "#44ff88", 12, 2);
       spawnTextParticle(player.x, player.y - 1, `+${heal} HP`, "#44ff88");
       showToast(`🔧 REPAIRED! +${heal} HP`);
+      const ws = document.getElementById("wrenchSound");
+      ws.currentTime = 0; ws.play().catch(() => {});
+    }
+  }
+}
+
+function updateBait() {
+  // Spawn bait pickup
+  baitPickupSpawn--;
+  if (baitPickupSpawn <= 0) {
+    baitPickupSpawn = BAIT_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(px, py) === 0) baitPickups.push({ x: px, y: py, ttl: 20 * 60 });
+  }
+
+  // Pickup collection
+  for (let i = baitPickups.length - 1; i >= 0; i--) {
+    const p = baitPickups[i];
+    p.ttl--;
+    if (p.ttl <= 0) { baitPickups.splice(i, 1); continue; }
+    if (p.x === player.x && p.y === player.y) {
+      baitPickups.splice(i, 1);
+      activeBaits.push({ x: player.x, y: player.y, timer: BAIT_DURATION });
+      spawnParticles(player.x, player.y, "#ffaa00", 10, 2);
+      showToast("🪝 BAIT PLACED! Enemies attracted for 20s!");
+    }
+  }
+
+  // Active baits
+  for (let i = activeBaits.length - 1; i >= 0; i--) {
+    const b = activeBaits[i];
+    b.timer--;
+
+    // Attract all enemies — move them toward bait each tick regardless of their own timer
+    for (const e of enemies) {
+      const dx = Math.sign(b.x - e.x);
+      const dy = Math.sign(b.y - e.y);
+      if (e.x !== b.x || e.y !== b.y) {
+        e.x += dx;
+        e.y += dy;
+        e.timer = e.speed;
+      }
+    }
+
+    // Attract bosses toward bait
+    for (const boss of bosses) {
+      boss.x += Math.sign(b.x - boss.x);
+      boss.y += Math.sign(b.y - boss.y);
+    }
+
+    // Attract demons toward bait (teleport override — move toward bait instead)
+    for (const d of demons) {
+      const ddx = Math.sign(b.x - d.x);
+      const ddy = Math.sign(b.y - d.y);
+      if (d.x !== b.x || d.y !== b.y) {
+        d.x += ddx;
+        d.y += ddy;
+      }
+    }
+
+    // Attract aliens toward bait
+    for (const a of aliens) {
+      if (a.x !== b.x || a.y !== b.y) {
+        a.x += Math.sign(b.x - a.x);
+        a.y += Math.sign(b.y - a.y);
+        a.timer = a.speed;
+      }
+    }
+
+    // Explode when timer runs out
+    if (b.timer <= 0) {
+      spawnParticles(b.x, b.y, "#ff6600", 30, 4);
+      spawnParticles(b.x, b.y, "#ffff00", 20, 3);
+      spawnParticles(b.x, b.y, "#ff0000", 15, 5);
+      showToast("💥 BAIT EXPLODED!");
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const e = enemies[j];
+        if (Math.abs(e.x - b.x) <= 3 && Math.abs(e.y - b.y) <= 3) {
+          spawnParticles(e.x, e.y, "#ff4400", 6, 2);
+          xp += e.xp; score += e.xp * 10;
+          enemies.splice(j, 1);
+          checkLevelUp();
+        }
+      }
+      for (const boss of bosses) {
+        if (Math.abs(boss.x - b.x) <= 3 && Math.abs(boss.y - b.y) <= 3) {
+          boss.hp -= 20;
+          spawnParticles(boss.x, boss.y, "#ff4400", 10, 2);
+          spawnTextParticle(boss.x, boss.y - 1, "-20", "#ff4400");
+        }
+      }
+      // Kill aliens in blast radius
+      for (let j = aliens.length - 1; j >= 0; j--) {
+        if (Math.abs(aliens[j].x - b.x) <= 3 && Math.abs(aliens[j].y - b.y) <= 3) {
+          spawnParticles(aliens[j].x, aliens[j].y, "#aa44ff", 6, 2);
+          xp += aliens[j].xp; score += aliens[j].xp * 10;
+          aliens.splice(j, 1);
+          checkLevelUp();
+        }
+      }
+      activeBaits.splice(i, 1);
     }
   }
 }
@@ -655,6 +1857,8 @@ function updateRainbow() {
       rainbowSpawnSuppressTimer = 20 * 60;
       showToast(`🌈 RAINBOW POWER!`);
       showRainbowAlert();
+      const rbs = document.getElementById("rainbowSound");
+      rbs.currentTime = 0; rbs.play().catch(() => {});
     }
   }
   if (rainbowFlicker > 0) rainbowFlicker--;
@@ -704,7 +1908,7 @@ function updateRage() {
             }
           }
           const t = getTile(tx, ty);
-          if (t !== 0 && t !== "lava") setTile(tx, ty, 0);
+          if (t !== 0 && t !== "lava" && t !== "yellow_block") setTile(tx, ty, 0);
         }
       }
       spawnParticles(player.x, player.y, "#ff4400", 6, 2.5);
@@ -735,6 +1939,7 @@ function teleportDemon(d) {
 }
 
 function updateDemons() {
+  if (peacefulMode) return;
   demonSpawnTimer--;
   if (demonSpawnTimer <= 0) {
     demonSpawnTimer = DEMON_SPAWN_INTERVAL;
@@ -779,11 +1984,175 @@ function updateDemons() {
       player.hp -= 12;
       player.invincible = 30;
       shakeTimer = 12;
+      playOuch();
       spawnParticles(player.x, player.y, "#ff4400", 8, 1.5);
       fireballs.splice(i, 1);
       continue;
     }
     if (f.dist > 25) fireballs.splice(i, 1);
+  }
+}
+
+function setBgMusic(src) {
+  const music = document.getElementById("bgMusic");
+  if (music.getAttribute("src") === src) return;
+  const wasPlaying = !music.paused;
+  music.setAttribute("src", src);
+  if (wasPlaying) music.play().catch(() => {});
+}
+
+function spawnCorruptedHeartAt(x, y) {
+  corruptedHearts.push({ x, y, hp: CORRUPTED_HEART_HP, maxHp: CORRUPTED_HEART_HP, spawnTimer: CORRUPTED_MINION_SPAWN_RATE, invertedTiles: new Set(), nextMinionType: 0 });
+  setBgMusic("wav/corrupted_castles.wav");
+}
+
+// Boss rotation: boss1..boss5 (the dragon) in order, then the Corrupted Heart, then it repeats.
+// Shared by the auto boss timer and the "Z" summon key so both stay in the same sequence.
+function spawnNextBossOrHeart(bX, bY) {
+  const cyclePos = bossSpawnCount % (bossImgs.length + 1);
+  bossSpawnCount++;
+  if (cyclePos === bossImgs.length) {
+    spawnCorruptedHeartAt(bX, bY);
+    spawnParticles(bX, bY, "#ff0066", 24, 3);
+    showToast("💔 A CORRUPTED HEART HAS APPEARED!");
+    return true;
+  }
+  const bHp = 40 + level * 5;
+  bosses.push({ x: bX, y: bY, hp: bHp, maxHp: bHp, timer: 0, facingRight: false, imgIdx: cyclePos });
+  spawnParticles(bX, bY, "#ff0000", 25, 3);
+  return false;
+}
+
+function updateCorruptedHearts() {
+  if (peacefulMode) return;
+
+  for (const h of corruptedHearts) {
+    h.spawnTimer--;
+    const myMinions = corruptedMinions.filter(m => m.heartRef === h);
+    if (h.spawnTimer <= 0 && myMinions.length < CORRUPTED_MINION_MAX_PER_HEART) {
+      h.spawnTimer = CORRUPTED_MINION_SPAWN_RATE;
+      // Always squid, shark, crab, vampire, dragon, in that order, then repeats.
+      const type = h.nextMinionType;
+      h.nextMinionType = (h.nextMinionType + 1) % CORRUPTED_MINION_STATS.length;
+      const cx = h.x + CORRUPTED_HEART_TILE_SPAN / 2, cy = h.y + CORRUPTED_HEART_TILE_SPAN / 2;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = CORRUPTED_HEART_TILE_SPAN / 2 + 2 + Math.floor(Math.random() * 3);
+      const mx = cx + Math.round(Math.cos(angle) * dist);
+      const my = cy + Math.round(Math.sin(angle) * dist);
+      const stats = CORRUPTED_MINION_STATS[type];
+      corruptedMinions.push({ x: mx, y: my, type, dmg: stats.dmg, xp: stats.xp, hp: CORRUPTED_MINION_HITS, maxHp: CORRUPTED_MINION_HITS, timer: 0, heartRef: h });
+      h.invertedTiles.add(k(mx, my));
+    }
+  }
+
+  // Minions move at the dragon boss's speed, and ignore every obstacle that would normally
+  // block an enemy — walls, doors, rocks, etc. Every tile they cross gets marked as
+  // color-inverted for as long as their heart is alive.
+  for (const m of corruptedMinions) {
+    m.timer--;
+    if (m.timer > 0) continue;
+    m.timer = Math.max(8, 20 - level * 2); // same cadence as the dragon boss (imgIdx 4)
+    const dx = Math.sign(player.x - m.x), dy = Math.sign(player.y - m.y);
+    if (dx !== 0) m.x += dx;
+    if (dy !== 0) m.y += dy;
+    m.heartRef.invertedTiles.add(k(m.x, m.y));
+    if (m.x === player.x && m.y === player.y && player.invincible <= 0) {
+      player.hp -= m.dmg;
+      player.invincible = 20;
+      shakeTimer = 10;
+      playOuch();
+    }
+  }
+}
+
+function updateCorruptedProjectiles() {
+  // Player shots take 3 hits to kill a corrupted minion
+  for (let i = corruptedMinions.length - 1; i >= 0; i--) {
+    const m = corruptedMinions[i];
+    for (let j = projectiles.length - 1; j >= 0; j--) {
+      const p = projectiles[j];
+      if (Math.round(p.x) === m.x && Math.round(p.y) === m.y) {
+        m.hp--;
+        spawnParticles(m.x, m.y, "#ff0066", 6, 2);
+        projectiles.splice(j, 1);
+        if (m.hp <= 0) {
+          spawnTextParticle(m.x, m.y, `+${m.xp}XP`);
+          xp += m.xp; score += m.xp * 10;
+          corruptedMinions.splice(i, 1);
+          checkLevelUp();
+        }
+        break;
+      }
+    }
+  }
+  // Player shots damage the heart itself — hits anywhere on its large planted footprint
+  for (const h of corruptedHearts) {
+    const cx = h.x + CORRUPTED_HEART_TILE_SPAN / 2, cy = h.y + CORRUPTED_HEART_TILE_SPAN / 2;
+    for (let j = projectiles.length - 1; j >= 0; j--) {
+      const p = projectiles[j];
+      if (p.x >= h.x - 0.5 && p.x <= h.x + CORRUPTED_HEART_TILE_SPAN + 0.5 &&
+          p.y >= h.y - 0.5 && p.y <= h.y + CORRUPTED_HEART_TILE_SPAN + 0.5) {
+        h.hp -= 5;
+        spawnParticles(p.x, p.y, "#ff0066", 5, 1.5);
+        spawnTextParticle(cx, cy - 1, "-5", "#ff0066");
+        projectiles.splice(j, 1);
+        break;
+      }
+    }
+  }
+  // Rage kills minions in range and damages the heart if its footprint is in range
+  if (rageTimer > 0 && frameCount % 4 === 0) {
+    for (let i = corruptedMinions.length - 1; i >= 0; i--) {
+      const m = corruptedMinions[i];
+      if (Math.abs(m.x - player.x) <= 2 && Math.abs(m.y - player.y) <= 2) {
+        spawnParticles(m.x, m.y, "#ff0066", 5, 1.5);
+        xp += m.xp; score += m.xp * 10;
+        corruptedMinions.splice(i, 1);
+        checkLevelUp();
+      }
+    }
+    for (const h of corruptedHearts) {
+      const nearestX = Math.max(h.x, Math.min(player.x, h.x + CORRUPTED_HEART_TILE_SPAN));
+      const nearestY = Math.max(h.y, Math.min(player.y, h.y + CORRUPTED_HEART_TILE_SPAN));
+      if (Math.abs(nearestX - player.x) <= 3 && Math.abs(nearestY - player.y) <= 3) {
+        h.hp -= 2;
+        spawnParticles(nearestX, nearestY, "#ff0066", 3, 1);
+      }
+    }
+  }
+  // Purple storm kills every minion and damages the heart
+  if (purpleTimer > 0 && frameCount % 6 === 0) {
+    for (let i = corruptedMinions.length - 1; i >= 0; i--) {
+      spawnParticles(corruptedMinions[i].x, corruptedMinions[i].y, "#cc44ff", 4, 1.5);
+      xp += corruptedMinions[i].xp; score += corruptedMinions[i].xp * 10;
+      corruptedMinions.splice(i, 1);
+      checkLevelUp();
+    }
+    for (const h of corruptedHearts) {
+      h.hp -= 3;
+      spawnParticles(h.x + CORRUPTED_HEART_TILE_SPAN / 2, h.y + CORRUPTED_HEART_TILE_SPAN / 2, "#cc44ff", 4, 1.5);
+    }
+  }
+  for (let i = corruptedHearts.length - 1; i >= 0; i--) {
+    const h = corruptedHearts[i];
+    if (h.hp <= 0) {
+      const cx = h.x + CORRUPTED_HEART_TILE_SPAN / 2, cy = h.y + CORRUPTED_HEART_TILE_SPAN / 2;
+      spawnParticles(cx, cy, "#ff0066", 30, 3);
+      spawnParticles(cx, cy, "#ffffff", 14, 2);
+      spawnTextParticle(cx, cy - 2, "CORRUPTED HEART DESTROYED!", "#ff0066");
+      score += 600 + level * 100;
+      xp += 20;
+      corruptedHearts.splice(i, 1);
+      checkLevelUp();
+      showToast("💔 CORRUPTED HEART DESTROYED!");
+      if (corruptedHearts.length === 0) {
+        setBgMusic("wav/castles.wav");
+        globalInvertedTiles.clear();
+        paused = true;
+        document.getElementById("bgMusic").pause();
+        document.getElementById("corruptionVictory").style.display = "flex";
+      }
+    }
   }
 }
 
@@ -825,6 +2194,22 @@ function updateProjectiles() {
         }
       }
     }
+    if (!hit) {
+      for (let j = alienSpawners.length - 1; j >= 0; j--) {
+        const s = alienSpawners[j];
+        if (!s.defeated && Math.abs(p.x - s.x) <= 1 && Math.abs(p.y - s.y) <= 1) {
+          s.hp -= 5; hit = true;
+          spawnParticles(s.x, s.y, "#ff4400", 4, 1);
+          spawnTextParticle(s.x, s.y - 1, "-5", "#ff4400");
+          if (s.hp <= 0) {
+            s.hp = 0; s.defeated = true;
+            spawnParticles(s.x, s.y, "#aa44ff", 16, 2.5);
+            showToast("👽 ALIEN SPAWNER DESTROYED!");
+          }
+          break;
+        }
+      }
+    }
     if (hit || p.dist > 30) projectiles.splice(i, 1);
   }
 }
@@ -843,28 +2228,38 @@ function checkLevelUp() {
   }
 }
 
-function showToast(msg) {
+function showToast(msg, duration = 2000, bigEmoji = false) {
   const t = document.getElementById("levelUpToast");
-  t.textContent = msg;
+  if (bigEmoji) {
+    // Wrap first and last characters (emojis) in a larger span
+    const parts = msg.split(" ");
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    const middle = parts.slice(1, -1).join(" ");
+    t.innerHTML = `<span style="font-size:4em;vertical-align:middle;">${first}</span> ${middle} <span style="font-size:4em;vertical-align:middle;">${last}</span>`;
+  } else {
+    t.textContent = msg;
+  }
   t.style.opacity = "1";
-  setTimeout(() => { t.style.opacity = "0"; }, 2000);
+  setTimeout(() => { t.style.opacity = "0"; }, duration);
 }
 
 function updateBosses() {
+  if (peacefulMode) return;
   if (bossTimer > 0) {
     bossTimer--;
     if (bossTimer === 180) showBossAlert();
   } else {
     const bX = player.x + (Math.random() > 0.5 ? 18 : -18);
     const bY = player.y + (Math.random() > 0.5 ? 18 : -18);
-    bosses.push({ x: bX, y: bY, hp: 40 + level * 5, maxHp: 40 + level * 5, timer: 0, facingRight: false });
+    spawnNextBossOrHeart(bX, bY);
     bossTimer = BOSS_INTERVAL;
   }
   for (let i = bosses.length - 1; i >= 0; i--) {
     const b = bosses[i];
     b.timer--;
     if (b.timer <= 0) {
-      b.timer = Math.max(15, 35 - level * 2);
+      b.timer = b.imgIdx === 4 ? Math.max(8, 20 - level * 2) : Math.max(15, 35 - level * 2);
       const dx = Math.sign(player.x - b.x), dy = Math.sign(player.y - b.y);
       if (dx !== 0) b.facingRight = dx > 0;
       let moved = false;
@@ -880,16 +2275,22 @@ function updateBosses() {
         spawnParticles(b.x, b.y, "#aa44ff", 8);
         spawnTextParticle(b.x, b.y - 1, "-15", "#aa44ff");
       }
+      if (getTile(b.x, b.y) === "🔥") {
+        b.hp -= 8;
+        spawnParticles(b.x, b.y, "#ff6600", 6, 2);
+        spawnTextParticle(b.x, b.y - 1, "-8", "#ff6600");
+      }
       for (let ox = -1; ox <= 1; ox++)
         for (let oy = -1; oy <= 1; oy++) {
           const t = getTile(b.x + ox, b.y + oy);
-          if (t !== 0 && t !== "lava") setTile(b.x + ox, b.y + oy, 0);
+          if (t !== 0 && t !== "lava" && t !== "🔥" && t !== "yellow_block") setTile(b.x + ox, b.y + oy, 0);
         }
     }
     if (Math.abs(b.x - player.x) <= 1 && Math.abs(b.y - player.y) <= 1 && player.invincible <= 0) {
       player.hp -= 15;
       player.invincible = 40;
       shakeTimer = 20;
+      playOuch();
       player.x -= Math.sign(player.x - b.x) * 2;
       player.y -= Math.sign(player.y - b.y) * 2;
     }
@@ -901,8 +2302,41 @@ function updateBosses() {
       bosses.splice(i, 1);
       checkLevelUp();
       showToast("🏆 BOSS SLAIN! +500 SCORE");
+      if (b.imgIdx === 4) {
+        // Boss 5 defeated — show victory screen
+        paused = true;
+        document.getElementById("bgMusic").pause();
+        document.getElementById("boss5Victory").style.display = "flex";
+      }
     }
   }
+}
+
+function respawnPlayer() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  player.hp = player.maxHp;
+  player.invincible = 120;
+  player.x = 0; player.y = 0;
+  _deadPlayed = false;
+  document.getElementById("gameOverScreen").style.display = "none";
+  document.getElementById("bgMusic").play().catch(() => {});
+  loop();
+}
+
+function closeBoss5Victory() {
+  document.getElementById("boss5Victory").style.display = "none";
+  paused = false;
+  document.getElementById("bgMusic").play().catch(() => {});
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  loop();
+}
+
+function closeCorruptionVictory() {
+  document.getElementById("corruptionVictory").style.display = "none";
+  paused = false;
+  document.getElementById("bgMusic").play().catch(() => {});
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  loop();
 }
 
 function showBossAlert() {
@@ -925,9 +2359,9 @@ function getDayNightOverlay() {
   const t = dayTime;
   let darkness;
   if (t < 0.4)      darkness = 0;
-  else if (t < 0.5) darkness = (t - 0.4) / 0.1 * 0.75;
-  else if (t < 0.9) darkness = 0.75;
-  else              darkness = (1 - t) / 0.1 * 0.75;
+  else if (t < 0.5) darkness = (t - 0.4) / 0.1 * 0.525;
+  else if (t < 0.9) darkness = 0.525;
+  else              darkness = (1 - t) / 0.1 * 0.525;
   return darkness;
 }
 
@@ -940,19 +2374,21 @@ function getDayLabel() {
 }
 
 function drawDayBar() {
-  const bc = document.getElementById("dayBar");
-  const bx = bc.getContext("2d");
-  const W = bc.width, H = bc.height;
+  if (!_dayBarCtx) _dayBarCtx = hudDayBarCanvas.getContext("2d");
+  const bx = _dayBarCtx;
+  const W = hudDayBarCanvas.width, H = hudDayBarCanvas.height;
   bx.clearRect(0, 0, W, H);
   const trackY = H / 2, trackH = 6, trackR = 3;
   const trackX = 14, trackW = W - 28;
   bx.fillStyle = "#0a0a1a";
   bx.beginPath(); bx.roundRect(trackX, trackY - trackH/2, trackW, trackH, trackR); bx.fill();
-  const grad = bx.createLinearGradient(trackX, 0, trackX + trackW, 0);
-  grad.addColorStop(0, "#ffdd44"); grad.addColorStop(0.4, "#ffcc00");
-  grad.addColorStop(0.45, "#ff6622"); grad.addColorStop(0.5, "#220066");
-  grad.addColorStop(0.9, "#110044"); grad.addColorStop(1, "#ff9944");
-  bx.fillStyle = grad;
+  if (!_dayBarGrad) {
+    _dayBarGrad = bx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+    _dayBarGrad.addColorStop(0, "#ffdd44"); _dayBarGrad.addColorStop(0.4, "#ffcc00");
+    _dayBarGrad.addColorStop(0.45, "#ff6622"); _dayBarGrad.addColorStop(0.5, "#220066");
+    _dayBarGrad.addColorStop(0.9, "#110044"); _dayBarGrad.addColorStop(1, "#ff9944");
+  }
+  bx.fillStyle = _dayBarGrad;
   bx.beginPath(); bx.roundRect(trackX, trackY - trackH/2, trackW, trackH, trackR); bx.fill();
   const indicX = trackX + dayTime * trackW;
   const isNight = dayTime > 0.45 && dayTime < 0.95;
@@ -988,6 +2424,7 @@ function drawBossHealth(b) {
 }
 
 function draw() {
+  ctx.imageSmoothingEnabled = false;
   let shakeX = 0, shakeY = 0;
   if (shakeTimer > 0) {
     shakeX = (Math.random() - 0.5) * 8;
@@ -1006,6 +2443,10 @@ function draw() {
   if (playerScreenY > centerY + DEAD_ZONE) cameraTarget.y = player.y * TILE - (centerY + DEAD_ZONE);
   camera.x += (cameraTarget.x - camera.x) * CAM_EASE + shakeX;
   camera.y += (cameraTarget.y - camera.y) * CAM_EASE + shakeY;
+  // Snap to whole pixels — sub-pixel camera positions leave hairline gaps between adjacent
+  // tile images (imageSmoothingEnabled is off), which show up as a distracting grid pattern.
+  camera.x = Math.round(camera.x);
+  camera.y = Math.round(camera.y);
 
   const sx = Math.floor(camera.x / TILE) - 1, sy = Math.floor(camera.y / TILE) - 1;
   const ex = sx + Math.ceil(canvas.width / TILE) + 2, ey = sy + Math.ceil(canvas.height / TILE) + 2;
@@ -1021,24 +2462,60 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(canvas.width, py); ctx.stroke();
   }
 
+  ctx.imageSmoothingEnabled = false;
   ctx.font = TILE + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  const dirtReady = dirtImg.complete && dirtImg.naturalWidth > 0;
+  const grassReady = grassImg.complete && grassImg.naturalWidth > 0;
+  const grassStompReady = grassStompImg.complete && grassStompImg.naturalWidth > 0;
+  const grassEdgeReady = grassEdgeImg.complete && grassEdgeImg.naturalWidth > 0;
+  tryInitGrassRegrowData();
+  const rockLgAnchors = [], treeLgAnchors = [], barrenLgAnchors = [], cactusLgAnchors = [], fireTiles = [], visibleFlowers = [], houseAnchors = [], castleAnchors = [];
   for (let y = sy; y < ey; y++) {
     for (let x = sx; x < ex; x++) {
       const t = getTile(x, y);
       const px = x * TILE - camera.x + TILE / 2, py = y * TILE - camera.y + TILE / 2;
+      if (biome(x, y) === "grasslands") {
+        const gpx = x * TILE - camera.x, gpy = y * TILE - camera.y;
+        const gKey = k(x, y);
+        const stompedAt = stompedGrassTiles.get(gKey);
+        if (stompedAt !== undefined) {
+          const regrowProgress = Math.min(1, (frameCount - stompedAt) / GRASS_REGROW_DURATION);
+          if (regrowProgress >= 1) {
+            stompedGrassTiles.delete(gKey);
+            regrowBlendCache.delete(gKey);
+            if (grassReady) ctx.drawImage(grassImg, gpx, gpy, TILE, TILE);
+          } else {
+            const blendCanvas = getRegrowingTileCanvas(gKey, regrowProgress);
+            if (blendCanvas) ctx.drawImage(blendCanvas, gpx, gpy, TILE, TILE);
+            else if (grassStompReady) ctx.drawImage(grassStompImg, gpx, gpy, TILE, TILE);
+          }
+        } else if (isGrassEdgeTile(x, y) && grassEdgeReady) {
+          ctx.drawImage(grassEdgeImg, gpx, gpy, TILE, TILE);
+        } else if (grassReady) {
+          ctx.drawImage(grassImg, gpx, gpy, TILE, TILE);
+        }
+      } else if (dirtReady) {
+        ctx.drawImage(dirtImg, x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+      }
       if (t === "lava") {
         const flicker = 0.8 + 0.2 * Math.sin(frameCount * 0.1 + x + y);
-        ctx.fillStyle = `rgba(255,${Math.floor(60 * flicker)},0,1)`;
+        ctx.fillStyle = `rgba(255,${Math.floor(60 * flicker)},0,0.92)`;
         ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
-        const grad = ctx.createRadialGradient(px, py, 0, px, py, TILE);
-        grad.addColorStop(0, `rgba(255,100,0,${0.3 * flicker})`);
-        grad.addColorStop(1, "transparent");
-        ctx.fillStyle = grad;
-        ctx.fillRect(x * TILE - camera.x - TILE, y * TILE - camera.y - TILE, TILE * 3, TILE * 3);
       } else if (t === "iron") {
         ctx.fillStyle = "#334"; ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
         ctx.strokeStyle = "#556"; ctx.lineWidth = 1;
         ctx.strokeRect(x * TILE - camera.x + 2, y * TILE - camera.y + 2, TILE - 4, TILE - 4);
+      } else if (t === "yellow_block") {
+        const ybx = x * TILE - camera.x, yby = y * TILE - camera.y;
+        if (hasKey) {
+          const pulse = 0.75 + 0.25 * Math.sin(frameCount * 0.1 + x + y);
+          ctx.globalAlpha = pulse;
+          ctx.shadowColor = "#ffee00"; ctx.shadowBlur = 10;
+        }
+        ctx.fillStyle = "#ffd700"; ctx.fillRect(ybx, yby, TILE, TILE);
+        ctx.strokeStyle = "#7a5a00"; ctx.lineWidth = 2;
+        ctx.strokeRect(ybx + 2, yby + 2, TILE - 4, TILE - 4);
+        ctx.shadowBlur = 0; ctx.globalAlpha = 1;
       } else if (t === "door") {
         ctx.fillStyle = "#5a3010"; ctx.fillRect(x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
         ctx.fillStyle = "#7a4820";
@@ -1049,9 +2526,199 @@ function draw() {
         ctx.beginPath(); ctx.arc(bx2 + TILE * 0.65, by2 + TILE * 0.55, 2.5, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = "#3a1a00"; ctx.lineWidth = 2;
         ctx.strokeRect(bx2 + 2, by2 + 2, TILE - 4, TILE - 4);
+      } else if (t === "🪨") {
+        const rImg = rockImgs[2];
+        if (rImg.complete && rImg.naturalWidth > 0) ctx.drawImage(rImg, x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        else ctx.fillText(t, px, py);
+      } else if (t === "rock_lg") {
+        rockLgAnchors.push({x, y});
+      } else if (t === "rock_sub") {
+        // dirt already drawn; 4×4 image rendered in post-pass from anchor
+      } else if (t === "🌳") {
+        treeLgAnchors.push({x, y});
+      } else if (t === "tree_sub") {
+        // dirt already drawn; 4×4 image rendered in post-pass from anchor
+      } else if (t === "🌲") {
+        barrenLgAnchors.push({x, y});
+      } else if (t === "barren_sub") {
+        // dirt already drawn; 4×4 image rendered in post-pass from anchor
+      } else if (t === "🌵") {
+        cactusLgAnchors.push({x, y});
+      } else if (t === "cactus_sub") {
+        // dirt already drawn; 4×4 image rendered in post-pass from anchor
+      } else if (t === "🍄") {
+        const mImg = mushroomImgs[((x * 7 + y * 13) >>> 0) % 7];
+        if (mImg.complete && mImg.naturalWidth > 0) ctx.drawImage(mImg, x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        else ctx.fillText(t, px, py);
+      } else if (t === "🔥") {
+        fireTiles.push({x, y});
+      } else if (t === "grass_rock") {
+        const rImg = rockImgs[((x * 11 + y * 17) >>> 0) % 3];
+        if (rImg.complete && rImg.naturalWidth > 0) ctx.drawImage(rImg, x * TILE - camera.x, y * TILE - camera.y, TILE, TILE);
+        else ctx.fillText("🪨", px, py);
+      } else if (t === "flower_yellow" || t === "flower_pink" || t === "flower_blue") {
+        visibleFlowers.push({x, y, type: t.slice(7)});
+      } else if (t === "house") {
+        houseAnchors.push({x, y});
+      } else if (t === "house_sub") {
+        // grass already drawn; 8×8 image rendered in post-pass from anchor
+      } else if (t === "castle") {
+        castleAnchors.push({x, y});
+      } else if (t === "castle_sub") {
+        // ground already drawn; 12×12 image rendered in post-pass from anchor
       } else if (typeof t === "string") {
         ctx.fillText(t, px, py);
       }
+    }
+  }
+
+  // Catch anchors just off the left/top viewport edge (bleed in up to 3 tiles)
+  for (let y = sy - 3; y < sy; y++)
+    for (let x = sx - 3; x < ex; x++) {
+      const t = getTile(x, y);
+      if (t === "rock_lg") rockLgAnchors.push({x, y});
+      if (t === "🌳") treeLgAnchors.push({x, y});
+      if (t === "🌲") barrenLgAnchors.push({x, y});
+      if (t === "🌵") cactusLgAnchors.push({x, y});
+    }
+  for (let y = sy; y < ey; y++)
+    for (let x = sx - 3; x < sx; x++) {
+      const t = getTile(x, y);
+      if (t === "rock_lg") rockLgAnchors.push({x, y});
+      if (t === "🌳") treeLgAnchors.push({x, y});
+      if (t === "🌲") barrenLgAnchors.push({x, y});
+      if (t === "🌵") cactusLgAnchors.push({x, y});
+    }
+  // Catch house anchors just off the left/top viewport edge (bleed in up to 7 tiles — it's 8x8)
+  for (let y = sy - 7; y < sy; y++)
+    for (let x = sx - 7; x < ex; x++) {
+      if (getTile(x, y) === "house") houseAnchors.push({x, y});
+    }
+  for (let y = sy; y < ey; y++)
+    for (let x = sx - 7; x < sx; x++) {
+      if (getTile(x, y) === "house") houseAnchors.push({x, y});
+    }
+  // Draw the 8×8 house above all terrain — solid, blocks movement like a rock
+  for (const {x, y} of houseAnchors) {
+    if (houseImg.complete && houseImg.naturalWidth > 0)
+      ctx.drawImage(houseImg, x * TILE - camera.x, y * TILE - camera.y, TILE * HOUSE_SIZE, TILE * HOUSE_SIZE);
+  }
+
+  // Catch castle anchors just off the left/top viewport edge (bleed in up to 11 tiles — it's 12x12)
+  for (let y = sy - 11; y < sy; y++)
+    for (let x = sx - 11; x < ex; x++) {
+      if (getTile(x, y) === "castle") castleAnchors.push({x, y});
+    }
+  for (let y = sy; y < ey; y++)
+    for (let x = sx - 11; x < sx; x++) {
+      if (getTile(x, y) === "castle") castleAnchors.push({x, y});
+    }
+  // Draw the 12×12 castle above all terrain — solid, blocks movement like a rock
+  for (const {x, y} of castleAnchors) {
+    if (castleImg.complete && castleImg.naturalWidth > 0)
+      ctx.drawImage(castleImg, x * TILE - camera.x, y * TILE - camera.y, TILE * CASTLE_SIZE, TILE * CASTLE_SIZE);
+  }
+
+  // Draw 4×4 rock boulders above all terrain
+  for (const {x, y} of rockLgAnchors) {
+    const rImg = rockImgs[((x * 11 + y * 17) >>> 0) % 3];
+    if (rImg.complete && rImg.naturalWidth > 0)
+      ctx.drawImage(rImg, x * TILE - camera.x, y * TILE - camera.y, TILE * 4, TILE * 4);
+  }
+  // Draw 4×4 trees above all terrain
+  for (const {x, y} of treeLgAnchors) {
+    const tImg = treeImgs[((x * 5 + y * 19) >>> 0) % 2];
+    if (tImg.complete && tImg.naturalWidth > 0)
+      ctx.drawImage(tImg, x * TILE - camera.x, y * TILE - camera.y, TILE * 4, TILE * 4);
+  }
+  // Draw 4×4 barren trees above all terrain
+  for (const {x, y} of barrenLgAnchors) {
+    const bImg = barrenImgs[((x * 3 + y * 23) >>> 0) % 2];
+    if (bImg.complete && bImg.naturalWidth > 0)
+      ctx.drawImage(bImg, x * TILE - camera.x, y * TILE - camera.y, TILE * 4, TILE * 4);
+  }
+  // Draw 4×4 cacti above all terrain
+  for (const {x, y} of cactusLgAnchors) {
+    const cImg = cactusImgs[((x * 7 + y * 31) >>> 0) % 2];
+    if (cImg.complete && cImg.naturalWidth > 0)
+      ctx.drawImage(cImg, x * TILE - camera.x, y * TILE - camera.y, TILE * 4, TILE * 4);
+  }
+
+  // Corrupted tile inversions — every tile a Corrupted Heart's minions (or corrupted regular
+  // enemies) cross gets its colors inverted for as long as a heart lives; cleared once the
+  // last heart is defeated.
+  if (corruptedHearts.length > 0) {
+    ctx.globalCompositeOperation = "difference";
+    ctx.fillStyle = "#ffffff";
+    for (const h of corruptedHearts) {
+      for (const key of h.invertedTiles) {
+        const [tx, ty] = key.split(",").map(Number);
+        if (tx < sx - 1 || tx > ex || ty < sy - 1 || ty > ey) continue;
+        ctx.fillRect(tx * TILE - camera.x, ty * TILE - camera.y, TILE, TILE);
+      }
+    }
+    for (const key of globalInvertedTiles) {
+      const [tx, ty] = key.split(",").map(Number);
+      if (tx < sx - 1 || tx > ex || ty < sy - 1 || ty > ey) continue;
+      ctx.fillRect(tx * TILE - camera.x, ty * TILE - camera.y, TILE, TILE);
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  // Position fire GIF pool elements over visible fire tiles
+  fireGifPool.forEach((el, i) => {
+    if (i < fireTiles.length) {
+      const {x, y} = fireTiles[i];
+      el.style.display = 'block';
+      el.style.left  = Math.round(x * TILE - camera.x) + 'px';
+      el.style.top   = Math.round(y * TILE - camera.y) + 'px';
+      el.style.width  = TILE + 'px';
+      el.style.height = TILE + 'px';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+
+  // Position flower GIF pool over visible flowers — the 7-frame animation plays only while
+  // the player is within 8 tiles; otherwise a frozen first-frame snapshot is shown instead.
+  flowerGifPool.forEach((el, i) => {
+    if (i < visibleFlowers.length) {
+      const f = visibleFlowers[i];
+      const near = (Math.abs(f.x - player.x) + Math.abs(f.y - player.y)) <= 8;
+      const mode = near ? "near" : "far";
+      const key = f.x + "," + f.y + ":" + f.type;
+      if (el.dataset.key !== key || el.dataset.mode !== mode) {
+        el.dataset.key = key;
+        el.dataset.mode = mode;
+        el.src = near ? flowerGifSrcs[f.type] : (flowerStaticSrcs[f.type] || flowerGifSrcs[f.type]);
+      }
+      el.style.display = 'block';
+      el.style.left = Math.round(f.x * TILE - camera.x) + 'px';
+      el.style.top = Math.round(f.y * TILE - camera.y) + 'px';
+      el.style.width = TILE + 'px';
+      el.style.height = TILE + 'px';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+
+  // Compass arrow — points at the axer until the key is earned, then switches to point at
+  // the new key-gated fence instead.
+  if (showAxerArrow) {
+    let targetX = null, targetY = null;
+    if (keyFence) {
+      targetX = keyFence.x + keyFence.size / 2;
+      targetY = keyFence.y + keyFence.size / 2;
+    } else if (fenceCompounds.length > 0) {
+      targetX = fenceCompounds[0].axer.x;
+      targetY = fenceCompounds[0].axer.y;
+    }
+    if (targetX !== null) {
+      const adx = targetX - player.x, ady = targetY - player.y;
+      const angleDeg = Math.atan2(ady, adx) * 180 / Math.PI;
+      const arrowEl = document.getElementById("axerArrow");
+      arrowEl.style.display = 'block';
+      arrowEl.style.transform = `rotate(${angleDeg}deg)`;
     }
   }
 
@@ -1060,7 +2727,8 @@ function draw() {
     const rpx = rp.x * TILE - camera.x, rpy = rp.y * TILE - camera.y;
     const expiring = rp.ttl < 3 * 60;
     const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.12);
-    ctx.globalAlpha = pulse; ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 14 * pulse;
+    ctx.globalAlpha = pulse;
+    if (!expiring) { ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 10; }
     if (rageIconImg.complete && rageIconImg.naturalWidth > 0) ctx.drawImage(rageIconImg, rpx + 2, rpy + 2, TILE - 4, TILE - 4);
     else { ctx.font = (TILE * 0.8) + "px serif"; ctx.fillText("😡", rpx + TILE/2, rpy + TILE/2); }
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
@@ -1071,7 +2739,8 @@ function draw() {
     const ppx = pp.x * TILE - camera.x, ppy = pp.y * TILE - camera.y;
     const expiring = pp.ttl < 3 * 60;
     const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.15);
-    ctx.globalAlpha = pulse; ctx.shadowColor = "#cc44ff"; ctx.shadowBlur = 14 * pulse;
+    ctx.globalAlpha = pulse;
+    if (!expiring) { ctx.shadowColor = "#cc44ff"; ctx.shadowBlur = 10; }
     if (purpleIconImg.complete && purpleIconImg.naturalWidth > 0) ctx.drawImage(purpleIconImg, ppx + 2, ppy + 2, TILE - 4, TILE - 4);
     else { ctx.font = (TILE * 0.8) + "px serif"; ctx.fillText("⚡", ppx + TILE/2, ppy + TILE/2); }
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
@@ -1082,10 +2751,45 @@ function draw() {
     const wpx = wp.x * TILE - camera.x, wpy = wp.y * TILE - camera.y;
     const expiring = wp.ttl < 3 * 60;
     const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.13);
-    ctx.globalAlpha = pulse; ctx.shadowColor = "#44ff88"; ctx.shadowBlur = 14 * pulse;
+    ctx.globalAlpha = pulse;
+    if (!expiring) { ctx.shadowColor = "#44ff88"; ctx.shadowBlur = 10; }
     if (wrenchIconImg.complete && wrenchIconImg.naturalWidth > 0) ctx.drawImage(wrenchIconImg, wpx + 2, wpy + 2, TILE - 4, TILE - 4);
     else { ctx.font = (TILE * 0.8) + "px serif"; ctx.fillText("🔧", wpx + TILE/2, wpy + TILE/2); }
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // Bait pickups
+  for (const bp of baitPickups) {
+    const bpx = bp.x * TILE - camera.x, bpy = bp.y * TILE - camera.y;
+    const expiring = bp.ttl < 3 * 60;
+    const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.13);
+    ctx.globalAlpha = pulse;
+    if (!expiring) { ctx.shadowColor = "#00ff44"; ctx.shadowBlur = 10; }
+    if (baitIconImg.complete && baitIconImg.naturalWidth > 0) ctx.drawImage(baitIconImg, bpx + 2, bpy + 2, TILE - 4, TILE - 4);
+    else { ctx.font = (TILE * 0.8) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🪝", bpx + TILE/2, bpy + TILE/2); }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // Active baits on board
+  for (const ab of activeBaits) {
+    const baitSize = TILE * 5;
+    const abx = ab.x * TILE + TILE/2 - camera.x - baitSize/2;
+    const aby = ab.y * TILE + TILE/2 - camera.y - baitSize/2;
+    const flicker = 0.6 + 0.4 * Math.sin(frameCount * 0.15);
+    const warning = ab.timer < 3 * 60;
+    ctx.globalAlpha = warning ? (Math.floor(frameCount / 4) % 2 === 0 ? 1 : 0.2) : flicker;
+    if (!warning) { ctx.shadowColor = "#00ff44"; ctx.shadowBlur = 12; }
+    if (baitImg.complete && baitImg.naturalWidth > 0) ctx.drawImage(baitImg, abx, aby, baitSize, baitSize);
+    else { ctx.font = (TILE * 3) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🪝", ab.x * TILE + TILE/2 - camera.x, ab.y * TILE + TILE/2 - camera.y); }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    // Timer bar
+    const barW = TILE * 2;
+    const barX = ab.x * TILE + TILE/2 - camera.x - barW/2;
+    const barY = ab.y * TILE - camera.y - baitSize/2 - 8;
+    const pct = ab.timer / BAIT_DURATION;
+    ctx.fillStyle = "#000"; ctx.fillRect(barX, barY, barW, 4);
+    ctx.fillStyle = pct > 0.5 ? "#ffaa00" : pct > 0.25 ? "#ff6600" : "#ff0000";
+    ctx.fillRect(barX, barY, barW * pct, 4);
   }
 
   // Rainbow pickups
@@ -1093,30 +2797,173 @@ function draw() {
     const rpx = rp.x * TILE - camera.x, rpy = rp.y * TILE - camera.y;
     const expiring = rp.ttl < 3 * 60;
     const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.14);
-    const hue = (frameCount * 4) % 360;
     ctx.globalAlpha = pulse;
-    ctx.shadowColor = `hsl(${hue},100%,60%)`; ctx.shadowBlur = 16 * pulse;
+    if (!expiring) { ctx.shadowColor = `hsl(${(frameCount * 4) % 360},100%,60%)`; ctx.shadowBlur = 12; }
     if (rainbowIconImg.complete && rainbowIconImg.naturalWidth > 0) ctx.drawImage(rainbowIconImg, rpx + 2, rpy + 2, TILE - 4, TILE - 4);
     else { ctx.font = (TILE * 0.8) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🌈", rpx + TILE/2, rpy + TILE/2); }
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   }
 
-  // Enemies
-  ctx.font = TILE * 0.8 + "px serif";
-  for (const e of enemies) {
-    const px = e.x * TILE + TILE / 2 - camera.x, py = e.y * TILE + TILE / 2 - camera.y;
-    if (e.night && darkness > 0.3) { ctx.shadowColor = "#ff0000"; ctx.shadowBlur = 8; }
-    ctx.fillText(e.emoji, px, py);
+  // Mystery pickups
+  for (const mp of mysteryPickups) {
+    const mpx = mp.x * TILE - camera.x, mpy = mp.y * TILE - camera.y;
+    const expiring = mp.ttl < 3 * 60;
+    const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.14);
+    ctx.globalAlpha = pulse;
+    if (!expiring) { ctx.shadowColor = `hsl(${(frameCount * 6) % 360},100%,60%)`; ctx.shadowBlur = 12; }
+    const mImg = mysteryIconImgs[mp.iconIdx];
+    if (mImg.complete && mImg.naturalWidth > 0) ctx.drawImage(mImg, mpx + 2, mpy + 2, TILE - 4, TILE - 4);
+    else { ctx.font = (TILE * 0.8) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🎲", mpx + TILE/2, mpy + TILE/2); }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // 2x Clone pickups
+  for (const cp of clone2xPickups) {
+    const cpx = cp.x * TILE - camera.x, cpy = cp.y * TILE - camera.y;
+    const expiring = cp.ttl < 3 * 60;
+    const pulse = expiring ? (Math.floor(frameCount / 8) % 2 === 0 ? 0.9 : 0.1) : 0.7 + 0.3 * Math.sin(frameCount * 0.13);
+    ctx.globalAlpha = pulse;
+    if (!expiring) { ctx.shadowColor = "#00ccff"; ctx.shadowBlur = 10; }
+    if (clone2xIconImg.complete && clone2xIconImg.naturalWidth > 0) ctx.drawImage(clone2xIconImg, cpx + 2, cpy + 2, TILE - 4, TILE - 4);
+    else { ctx.font = (TILE * 0.8) + "px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("2X", cpx + TILE/2, cpy + TILE/2); }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // Alien spawners
+  for (const s of alienSpawners) {
+    const spx = s.x * TILE - camera.x, spy = s.y * TILE - camera.y;
+    if (s.defeated) {
+      const blink = Math.floor(frameCount / 8) % 2 === 0;
+      ctx.globalAlpha = blink ? 0.9 : 0.4;
+      if (alienSpawnerImg.complete && alienSpawnerImg.naturalWidth > 0)
+        ctx.drawImage(alienSpawnerImg, spx, spy, TILE * 2, TILE * 2);
+      ctx.globalAlpha = blink ? 0.35 : 0.15;
+      ctx.fillStyle = "#ff2200";
+      ctx.fillRect(spx, spy, TILE * 2, TILE * 2);
+    } else {
+      const pulse = 0.7 + 0.3 * Math.sin(frameCount * 0.1);
+      ctx.shadowColor = "#aa44ff"; ctx.shadowBlur = 8;
+      ctx.globalAlpha = pulse;
+      if (alienSpawnerImg.complete && alienSpawnerImg.naturalWidth > 0)
+        ctx.drawImage(alienSpawnerImg, spx, spy, TILE * 2, TILE * 2);
+      else {
+        ctx.font = (TILE * 1.5) + "px serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("🛸", spx + TILE, spy + TILE);
+      }
+      // Health bar
+      const barW = TILE * 2, barH = 4;
+      const barX = spx, barY = spy - barH - 2;
+      ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+      ctx.fillStyle = "#330000";
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = s.hp / s.maxHp > 0.5 ? "#44ff44" : s.hp / s.maxHp > 0.25 ? "#ffaa00" : "#ff2200";
+      ctx.fillRect(barX, barY, barW * (s.hp / s.maxHp), barH);
+    }
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+
+  // Aliens
+  for (const a of aliens) {
+    const aSize = TILE * 3;
+    const apx = a.x * TILE + TILE/2 - camera.x - aSize/2;
+    const apy = a.y * TILE + TILE/2 - camera.y - aSize/2;
+    const aImg = a.type === 1 ? alien1Img : alien2Img;
+    if (aImg.complete && aImg.naturalWidth > 0) {
+      ctx.drawImage(aImg, apx, apy, aSize, aSize);
+    } else {
+      ctx.font = aSize + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("👽", a.x * TILE + TILE/2 - camera.x, a.y * TILE + TILE/2 - camera.y);
+    }
+  }
+
+  // Axers — wander harmlessly inside their fenced grasslands compound
+  for (const fc of fenceCompounds) {
+    const a = fc.axer;
+    const aSize = TILE * 2.85; // 3x — wanderBounds is inset to keep this from bleeding into the fence/house
+    const axpx = a.x * TILE + TILE/2 - camera.x - aSize/2;
+    const axpy = a.y * TILE + TILE/2 - camera.y - aSize/2;
+    if (axerImg.complete && axerImg.naturalWidth > 0) {
+      ctx.drawImage(axerImg, axpx, axpy, aSize, aSize);
+    } else {
+      ctx.font = aSize + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("🪓", a.x * TILE + TILE/2 - camera.x, a.y * TILE + TILE/2 - camera.y);
+    }
+  }
+
+  // Corrupted minions — spawned by the Corrupted Heart, die in one hit.
+  // Each is the corrupted twin of a boss, rendered at that same boss's size.
+  for (const m of corruptedMinions) {
+    const isDragonType = m.type === 4;
+    const mW = isDragonType ? TILE * 9 : TILE * 3;
+    const mH = isDragonType ? TILE * 6 : TILE * 3;
+    const mpx = m.x * TILE + TILE/2 - camera.x - mW/2;
+    const mpy = m.y * TILE + TILE/2 - camera.y - mH/2;
+    const mImg = corruptedMinionImgs[m.type];
+    ctx.shadowColor = "#ff0066"; ctx.shadowBlur = 6;
+    if (mImg.complete && mImg.naturalWidth > 0) {
+      ctx.drawImage(mImg, mpx, mpy, mW, mH);
+    } else {
+      ctx.font = mW + "px serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("💢", m.x * TILE + TILE/2 - camera.x, m.y * TILE + TILE/2 - camera.y);
+    }
     ctx.shadowBlur = 0;
   }
+
+  // Corrupted Heart — planted in place like a large tree stump, no floating/bobbing.
+  // Drawn via a real <img> (corruptedHeartGifPool) so its GIF animation actually plays;
+  // drawImage()'ing a GIF onto canvas freezes it on the first frame.
+  const hSize = TILE * CORRUPTED_HEART_TILE_SPAN;
+  corruptedHeartGifPool.forEach((el, i) => {
+    if (i < corruptedHearts.length) {
+      const h = corruptedHearts[i];
+      el.style.display = 'block';
+      el.style.left = Math.round(h.x * TILE - camera.x) + 'px';
+      el.style.top = Math.round(h.y * TILE - camera.y) + 'px';
+      el.style.width = hSize + 'px';
+      el.style.height = hSize + 'px';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+  for (const h of corruptedHearts) {
+    const hpx = h.x * TILE - camera.x, hpy = h.y * TILE - camera.y;
+    const barW = TILE * 5, barH = 10;
+    const bpx = hpx + hSize/2 - barW/2;
+    const bpy = hpy - barH - 18;
+    ctx.fillStyle = "#000"; ctx.fillRect(bpx - 1, bpy - 1, barW + 2, barH + 2);
+    const hpct = Math.max(0, h.hp / h.maxHp);
+    ctx.fillStyle = hpct > 0.5 ? "#ff0066" : hpct > 0.25 ? "#ff4488" : "#ffff00";
+    ctx.fillRect(bpx, bpy, barW * hpct, barH);
+    ctx.strokeStyle = "#ffffff44"; ctx.lineWidth = 1;
+    ctx.strokeRect(bpx, bpy, barW, barH);
+    ctx.font = "9px 'Share Tech Mono'"; ctx.textAlign = "center"; ctx.fillStyle = "#fff";
+    ctx.fillText(`CORRUPTED HEART ${Math.ceil(h.hp)}/${h.maxHp}`, bpx + barW/2, bpy - 4);
+  }
+
+  // Enemies — rendered with inverted colors while any Corrupted Heart is alive
+  const eSize = TILE * 1.8;
+  const eOff = (TILE - eSize) / 2;
+  ctx.font = TILE * 0.8 + "px serif";
+  if (corruptedHearts.length > 0) ctx.filter = "invert(1)";
+  for (const e of enemies) {
+    const sImg = skullImgs[e.skullIdx ?? 0];
+    if (sImg.complete && sImg.naturalWidth > 0) {
+      ctx.drawImage(sImg, e.x * TILE - camera.x + eOff, e.y * TILE - camera.y + eOff, eSize, eSize);
+    } else {
+      ctx.fillText(e.emoji, e.x * TILE + TILE / 2 - camera.x, e.y * TILE + TILE / 2 - camera.y);
+    }
+  }
+  ctx.filter = "none";
 
   // Projectiles
   ctx.font = TILE * 0.7 + "px serif";
   for (const p of projectiles) {
-    ctx.shadowColor = "#88ffff"; ctx.shadowBlur = 10;
     ctx.fillText("⚡", p.x * TILE + TILE / 2 - camera.x, p.y * TILE + TILE / 2 - camera.y);
   }
-  ctx.shadowBlur = 0;
 
   // Fireballs
   for (const f of fireballs) {
@@ -1124,7 +2971,7 @@ function draw() {
     const fpy = f.y * TILE + TILE / 2 - camera.y;
     const pulse = 0.85 + 0.15 * Math.sin(frameCount * 0.3);
     ctx.globalAlpha = pulse;
-    ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 28;
+    ctx.shadowColor = "#ff4400"; ctx.shadowBlur = 6;
     if (fireballImg.complete && fireballImg.naturalWidth > 0) {
       const fsz = TILE * 3;
       ctx.drawImage(fireballImg, fpx - fsz/2, fpy - fsz/2, fsz, fsz);
@@ -1142,7 +2989,7 @@ function draw() {
     const dpx = d.x * TILE + TILE/2 - camera.x - dSize/2;
     const dpy = d.y * TILE + TILE/2 - camera.y - dSize/2;
     const bob = Math.sin(frameCount * 0.07 + d.x) * 5;
-    ctx.shadowColor = "#ff2200"; ctx.shadowBlur = 16 + 8 * Math.sin(frameCount * 0.1);
+    ctx.shadowColor = "#ff2200"; ctx.shadowBlur = 10;
     if (demonImg.complete && demonImg.naturalWidth > 0) {
       ctx.drawImage(demonImg, dpx, dpy + bob, dSize, dSize);
     } else {
@@ -1166,19 +3013,22 @@ function draw() {
 
   // Bosses — flip horizontally when moving right
   for (const b of bosses) {
-    const bossSize = TILE * 3;
-    const bx3 = (b.x - 1) * TILE - camera.x;
-    const by3 = (b.y - 1) * TILE - camera.y;
+    const isBoss5 = b.imgIdx === 4;
+    const bossW = isBoss5 ? TILE * 9 : TILE * 3;
+    const bossH = isBoss5 ? TILE * 6 : TILE * 3;
+    const bx3 = b.x * TILE + TILE/2 - camera.x - bossW/2;
+    const by3 = b.y * TILE + TILE/2 - camera.y - bossH/2;
     ctx.save();
     if (b.facingRight) {
-      ctx.translate(bx3 + bossSize / 2, by3 + bossSize / 2);
+      ctx.translate(bx3 + bossW / 2, by3 + bossH / 2);
       ctx.scale(-1, 1);
-      ctx.translate(-(bx3 + bossSize / 2), -(by3 + bossSize / 2));
+      ctx.translate(-(bx3 + bossW / 2), -(by3 + bossH / 2));
     }
-    if (bossImg.complete && bossImg.naturalWidth > 0) {
-      ctx.drawImage(bossImg, bx3, by3, bossSize, bossSize);
+    const bImg = bossImgs[b.imgIdx];
+    if (bImg.complete && bImg.naturalWidth > 0) {
+      ctx.drawImage(bImg, bx3, by3, bossW, bossH);
     } else {
-      ctx.font = bossSize + "px serif";
+      ctx.font = bossW + "px serif";
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText("👹", b.x * TILE + TILE / 2 - camera.x, b.y * TILE + TILE / 2 - camera.y);
     }
@@ -1187,8 +3037,6 @@ function draw() {
   }
 
   // Player
-  const rageEl = document.getElementById("rageGifEl");
-  const purpleEl = document.getElementById("purpleGifEl");
   if (purpleTimer > 0) {
     const vAlpha = 0.1 + 0.07 * Math.sin(frameCount * 0.25);
     ctx.fillStyle = `rgba(100,0,200,${vAlpha})`;
@@ -1203,14 +3051,15 @@ function draw() {
     const purpleSize = TILE * 2;
     const ppx2 = player.x * TILE + TILE/2 - camera.x - purpleSize/2;
     const ppy2 = player.y * TILE + TILE/2 - camera.y - purpleSize/2;
-    purpleEl.style.display = "block";
-    purpleEl.style.left = Math.round(ppx2) + "px";
-    purpleEl.style.top = Math.round(ppy2) + "px";
-    purpleEl.style.width = purpleSize + "px";
-    purpleEl.style.height = purpleSize + "px";
-    purpleEl.style.filter = `drop-shadow(0 0 ${8 + 5 * Math.sin(frameCount * 0.2)}px #cc44ff)`;
+    hudPurpleGifEl.style.display = "block";
+    hudPurpleGifEl.style.left = Math.round(ppx2) + "px";
+    hudPurpleGifEl.style.top = Math.round(ppy2) + "px";
+    hudPurpleGifEl.style.width = purpleSize + "px";
+    hudPurpleGifEl.style.height = purpleSize + "px";
+    if (!_purpleFilterSet) { hudPurpleGifEl.style.filter = "drop-shadow(0 0 8px #cc44ff)"; _purpleFilterSet = true; }
   } else {
-    purpleEl.style.display = "none";
+    hudPurpleGifEl.style.display = "none";
+    _purpleFilterSet = false;
   }
   if (rageTimer > 0) {
     const rageSize = TILE * 2;
@@ -1219,21 +3068,66 @@ function draw() {
     const vAlpha = 0.12 + 0.08 * Math.sin(frameCount * 0.2);
     ctx.fillStyle = `rgba(255,30,0,${vAlpha})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    rageEl.style.display = "block";
-    rageEl.style.left = Math.round(rpx) + "px";
-    rageEl.style.top = Math.round(rpy) + "px";
-    rageEl.style.width = rageSize + "px";
-    rageEl.style.height = rageSize + "px";
-    rageEl.style.filter = `drop-shadow(0 0 ${10 + 6 * Math.sin(frameCount * 0.15)}px #ff2200)`;
+    hudRageGifEl.style.display = "block";
+    hudRageGifEl.style.left = Math.round(rpx) + "px";
+    hudRageGifEl.style.top = Math.round(rpy) + "px";
+    hudRageGifEl.style.width = rageSize + "px";
+    hudRageGifEl.style.height = rageSize + "px";
+    if (!_rageFilterSet) { hudRageGifEl.style.filter = "drop-shadow(0 0 10px #ff2200)"; _rageFilterSet = true; }
+    const pSize = TILE * 1.2;
+    const spx = player.x * TILE + TILE/2 - camera.x - pSize/2;
+    const spy = player.y * TILE + TILE/2 - camera.y - pSize/2;
+    hudRageSkinEl.src = playerImg.src;
+    hudRageSkinEl.style.display = "block";
+    hudRageSkinEl.style.left = Math.round(spx) + "px";
+    hudRageSkinEl.style.top = Math.round(spy) + "px";
+    hudRageSkinEl.style.width = pSize + "px";
+    hudRageSkinEl.style.height = pSize + "px";
+    hudRageSkinEl.style.opacity = (player.invincible > 0 && Math.floor(frameCount / 3) % 2 === 0) ? "0.4" : "1";
   } else {
-    rageEl.style.display = "none";
+    hudRageGifEl.style.display = "none";
+    hudRageSkinEl.style.display = "none";
+    _rageFilterSet = false;
     if (purpleTimer <= 0) {
-      ctx.font = TILE + "px serif";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
       if (player.invincible > 0 && Math.floor(frameCount / 3) % 2 === 0) ctx.globalAlpha = 0.4;
-      ctx.fillText(player.hp > 0 ? "🤖" : "☠️", player.x * TILE + TILE/2 - camera.x, player.y * TILE + TILE/2 - camera.y);
+      if (playerImg.complete && playerImg.naturalWidth > 0) {
+        const pSize = TILE * 1.2;
+        ctx.drawImage(playerImg,
+          player.x * TILE + TILE/2 - camera.x - pSize/2,
+          player.y * TILE + TILE/2 - camera.y - pSize/2,
+          pSize, pSize);
+      } else {
+        ctx.font = TILE + "px serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(player.hp > 0 ? "🤖" : "☠️", player.x * TILE + TILE/2 - camera.x, player.y * TILE + TILE/2 - camera.y);
+      }
       ctx.globalAlpha = 1;
     }
+  }
+
+  // Active 2x Clone
+  if (activeClone) {
+    const cSize = TILE * 1.2;
+    const cpx = activeClone.x * TILE + TILE/2 - camera.x - cSize/2;
+    const cpy = activeClone.y * TILE + TILE/2 - camera.y - cSize/2;
+    ctx.save();
+    ctx.shadowColor = "#00ffff"; ctx.shadowBlur = 14;
+    ctx.globalAlpha = 0.85 + 0.15 * Math.sin(frameCount * 0.15);
+    if (playerImg.complete && playerImg.naturalWidth > 0) ctx.drawImage(playerImg, cpx, cpy, cSize, cSize);
+    ctx.restore();
+    ctx.shadowBlur = 0;
+    // Lifetime bar
+    const barW = TILE * 2;
+    const barX = activeClone.x * TILE + TILE/2 - camera.x - barW/2;
+    const barY = activeClone.y * TILE - camera.y - cSize/2 - 10;
+    const pct = activeClone.lifetime / CLONE_2X_LIFETIME;
+    ctx.fillStyle = "#001122"; ctx.fillRect(barX - 1, barY - 1, barW + 2, 6);
+    ctx.fillStyle = pct > 0.5 ? "#00ffff" : pct > 0.25 ? "#88ffff" : "#ff8800";
+    ctx.fillRect(barX, barY, barW * pct, 4);
+    ctx.font = "bold 9px 'Share Tech Mono'"; ctx.textAlign = "center";
+    ctx.fillStyle = "#00ffff"; ctx.shadowColor = "#00ffff"; ctx.shadowBlur = 5;
+    ctx.fillText("2X", activeClone.x * TILE + TILE/2 - camera.x, barY - 3);
+    ctx.shadowBlur = 0;
   }
 
   drawParticles();
@@ -1252,6 +3146,8 @@ function draw() {
   if (darkness > 0) {
     ctx.fillStyle = `rgba(0,5,30,${darkness})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Stars
     if (darkness > 0.4) {
       for (let s = 0; s < 80; s++) {
         const sx2 = ((s * 173 + frameCount * 0.5) % canvas.width);
@@ -1265,69 +3161,79 @@ function draw() {
     }
   }
 
-  // HUD
-  const hpPct = Math.max(0, player.hp / player.maxHp * 100);
-  document.getElementById("hpFill").style.width = hpPct + "%";
-  document.getElementById("hpVal").textContent = Math.ceil(player.hp);
-  document.getElementById("scoreVal").textContent = score;
-  document.getElementById("levelVal").textContent = level;
-  document.getElementById("bestVal").textContent = getBestScore();
+  // HUD — only touch DOM when values actually change
+  const hpCeil = Math.ceil(player.hp);
+  if (hpCeil !== _hudHp) {
+    _hudHp = hpCeil;
+    hudHpFill.style.width = Math.max(0, player.hp / player.maxHp * 100) + "%";
+    hudHpVal.textContent = hpCeil;
+  }
+  if (score !== _hudScore)  { _hudScore = score;   hudScoreVal.textContent = score; }
+  if (level !== _hudLevel)  { _hudLevel = level;   hudLevelVal.textContent = level; }
+  const best = getBestScore();
+  if (best  !== _hudBest)   { _hudBest  = best;    hudBestVal.textContent  = best; }
   const sec = Math.ceil(bossTimer / 60);
-  document.getElementById("bossTimerVal").textContent = `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, "0")}`;
+  const newBossText = peacefulMode ? "🕊" : `${Math.floor(sec/60)}:${(sec%60).toString().padStart(2,"0")}`;
+  if (newBossText !== _hudBossTimerText) { _hudBossTimerText = newBossText; hudBossTimerVal.textContent = newBossText; }
   const dl = getDayLabel();
-  document.getElementById("dayPhaseLbl").textContent = dl.text;
-  document.getElementById("dayPhaseLbl").style.color = dl.color;
+  if (dl.text  !== _hudDayLabel) { _hudDayLabel = dl.text;  hudDayPhaseLbl.textContent = dl.text; }
+  if (dl.color !== _hudDayColor) { _hudDayColor = dl.color; hudDayPhaseLbl.style.color = dl.color; }
   drawDayBar();
 
   // Rage HUD
-  const rageSection = document.getElementById("rageSection");
   if (rageStored || rageTimer > 0) {
-    rageSection.style.display = "flex";
-    const rageFill = document.getElementById("rageFill");
-    const rageLabel = document.getElementById("rageLabel");
+    hudRageSection.style.display = "flex";
     if (rageTimer > 0) {
-      rageFill.style.width = (rageTimer / RAGE_DURATION * 100) + "%";
-      rageFill.style.background = "linear-gradient(90deg,#ff2200,#ff8800)";
-      rageLabel.textContent = Math.ceil(rageTimer / 60) + "s";
-      rageLabel.style.color = "#ff4400";
+      hudRageFill.style.width = (rageTimer / RAGE_DURATION * 100) + "%";
+      hudRageFill.style.background = "linear-gradient(90deg,#ff2200,#ff8800)";
+      hudRageLabel.textContent = Math.ceil(rageTimer / 60) + "s";
+      hudRageLabel.style.color = "#ff4400";
     } else {
-      rageFill.style.width = "100%";
-      rageFill.style.background = "linear-gradient(90deg,#ff6600,#ffcc00)";
-      rageLabel.textContent = "READY";
-      rageLabel.style.color = "#ffcc00";
+      hudRageFill.style.width = "100%";
+      hudRageFill.style.background = "linear-gradient(90deg,#ff6600,#ffcc00)";
+      hudRageLabel.textContent = "READY";
+      hudRageLabel.style.color = "#ffcc00";
     }
   } else {
-    rageSection.style.display = "none";
+    hudRageSection.style.display = "none";
   }
 
   // Purple HUD
-  const purpleSection = document.getElementById("purpleSection");
   if (purpleStored || purpleTimer > 0) {
-    purpleSection.style.display = "flex";
-    const purpleFill = document.getElementById("purpleFill");
-    const purpleLabel = document.getElementById("purpleLabel");
+    hudPurpleSection.style.display = "flex";
     if (purpleTimer > 0) {
-      purpleFill.style.width = (purpleTimer / PURPLE_ELEC_DURATION * 100) + "%";
-      purpleLabel.textContent = Math.ceil(purpleTimer / 60) + "s";
-      purpleLabel.style.color = "#cc44ff";
+      hudPurpleFill.style.width = (purpleTimer / PURPLE_ELEC_DURATION * 100) + "%";
+      hudPurpleLabel.textContent = Math.ceil(purpleTimer / 60) + "s";
+      hudPurpleLabel.style.color = "#cc44ff";
     } else {
-      purpleFill.style.width = "100%";
-      purpleLabel.textContent = "READY";
-      purpleLabel.style.color = "#dd88ff";
+      hudPurpleFill.style.width = "100%";
+      hudPurpleLabel.textContent = "READY";
+      hudPurpleLabel.style.color = "#dd88ff";
     }
   } else {
-    purpleSection.style.display = "none";
+    hudPurpleSection.style.display = "none";
+  }
+
+  // Clone 2x HUD
+  if (activeClone) {
+    hudClone2xSection.style.display = "flex";
+    hudClone2xSep.style.display = "";
+    hudClone2xFill.style.width = (activeClone.lifetime / CLONE_2X_LIFETIME * 100) + "%";
+    hudClone2xLabel.textContent = Math.ceil(activeClone.lifetime / 60) + "s";
+  } else {
+    hudClone2xSection.style.display = "none";
+    hudClone2xSep.style.display = "none";
   }
 
   if (paused) {
-    document.getElementById("rageGifEl").style.display = "none";
-    document.getElementById("purpleGifEl").style.display = "none";
+    hudRageGifEl.style.display = "none";
+    hudPurpleGifEl.style.display = "none";
     drawPauseOverlay();
   }
 
   if (player.hp <= 0) {
-    document.getElementById("rageGifEl").style.display = "none";
-    document.getElementById("purpleGifEl").style.display = "none";
+    hudRageGifEl.style.display = "none";
+    hudPurpleGifEl.style.display = "none";
     if (!_deadPlayed) {
       _deadPlayed = true;
       document.getElementById("bgMusic").pause();
@@ -1335,13 +3241,13 @@ function draw() {
       deadSound.volume = 0.8;
       deadSound.currentTime = 0;
       deadSound.play().catch(() => {});
-      const best = getBestScore();
-      if (score > best) saveBestScore(score);
+      const curBest = getBestScore();
+      if (score > curBest) saveBestScore(score);
     }
-    const best = getBestScore();
-    document.getElementById("finalScore").textContent =
-      `Score: ${score} | Level: ${level}${score >= best && score > 0 ? " | 🏆 NEW BEST!" : " | Best: " + best}`;
-    document.getElementById("gameOverScreen").style.display = "flex";
+    const curBest = getBestScore();
+    hudFinalScore.textContent =
+      `Score: ${score} | Level: ${level}${score >= curBest && score > 0 ? " | 🏆 NEW BEST!" : " | Best: " + curBest}`;
+    hudGameOverScreen.style.display = "flex";
   }
 }
 
@@ -1367,51 +3273,717 @@ function togglePause() {
     btn.style.color = "#88ff88";
     btn.style.borderColor = "#1a4a1a";
     music.play().catch(() => {});
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     loop();
   }
 }
 
 function drawPauseOverlay() {
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillStyle = "rgba(0,0,0,0.82)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.font = "bold 28px 'Press Start 2P', monospace";
+
+  // Title
+  ctx.font = "bold 22px 'Press Start 2P', monospace";
   ctx.fillStyle = "#ffd700";
-  ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 20;
-  ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 16);
+  ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 16;
+  ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2 - 160);
   ctx.shadowBlur = 0;
-  ctx.font = "12px 'Share Tech Mono', monospace";
-  ctx.fillStyle = "#448844";
-  ctx.fillText("click RESUME to continue", canvas.width / 2, canvas.height / 2 + 22);
+
+  // Controls list
+  const controls = [
+    ["MOVEMENT",    "Arrows or WASD"],
+    ["LIGHTNING",   "Space"],
+    ["PLACE ROCK",  "B"],
+    ["PLACE TREE",  "Y"],
+    ["PLACE CACTUS","R"],
+    ["PLACE MUSHROOM","U"],
+    ["PLACE FIRE",  "F"],
+    ["PLACE IRON",  "T"],
+    ["PLACE DOOR",  "G"],
+    ["PLACE LAVA",  "H"],
+    ["MUTE",        "M"],
+    ["PAUSE",       "Pause Button"],
+  ];
+
+  const startY = canvas.height / 2 - 100;
+  const lineH = 28;
+  ctx.font = "10px 'Share Tech Mono', monospace";
+
+  controls.forEach(([action, key], idx) => {
+    const y = startY + idx * lineH;
+    // Key on left
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#88ff88";
+    ctx.fillText(key, canvas.width / 2 - 16, y);
+    // Action on right
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#448844";
+    ctx.fillText(action, canvas.width / 2 + 16, y);
+  });
+
+  // Resume hint
+  ctx.textAlign = "center";
+  ctx.font = "10px 'Share Tech Mono', monospace";
+  ctx.fillStyle = "#336633";
+  ctx.fillText("click RESUME to continue", canvas.width / 2, startY + controls.length * lineH + 20);
 }
+
+// ─── MYSTERY POWERUP ─────────────────────────────────────────
+function updateMystery() {
+  mysteryPickupSpawn--;
+  if (mysteryPickupSpawn <= 0) {
+    mysteryPickupSpawn = MYSTERY_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(px, py) === 0)
+      mysteryPickups.push({ x: px, y: py, ttl: 20 * 60, swapTimer: 0, iconIdx: 0 });
+  }
+
+  for (let i = mysteryPickups.length - 1; i >= 0; i--) {
+    const m = mysteryPickups[i];
+    m.ttl--;
+    if (m.ttl <= 0) { mysteryPickups.splice(i, 1); continue; }
+
+    // Cycle icon every 0.5s
+    m.swapTimer++;
+    if (m.swapTimer >= MYSTERY_SWAP_RATE) {
+      m.swapTimer = 0;
+      m.iconIdx = (m.iconIdx + 1) % 4;
+    }
+
+    if (m.x === player.x && m.y === player.y) {
+      mysteryPickups.splice(i, 1);
+      // Grant the powerup matching current icon
+      switch (m.iconIdx) {
+        case 0: // rage
+          rageStored = true;
+          spawnParticles(player.x, player.y, "#ff6600", 10, 2);
+          showToast("🎲 MYSTERY: 😡 RAGE READY — Press SPACE!");
+          break;
+        case 1: // purple
+          purpleStored = true;
+          spawnParticles(player.x, player.y, "#cc44ff", 10, 2);
+          showToast("🎲 MYSTERY: ⚡ PURPLE STORM READY — Press SPACE!");
+          break;
+        case 2: // rainbow
+          const killed = enemies.length;
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            spawnParticles(enemies[j].x, enemies[j].y, `hsl(${Math.random()*360},100%,60%)`, 6, 2);
+            xp += enemies[j].xp; score += enemies[j].xp * 10;
+            enemies.splice(j, 1);
+          }
+          player.hp = Math.min(player.hp + killed, player.maxHp);
+          rainbowFlicker = RAINBOW_FLICKER_DURATION;
+          rainbowSpawnSuppressTimer = 20 * 60;
+          checkLevelUp();
+          showToast("🎲 MYSTERY: 🌈 RAINBOW POWER!");
+          showRainbowAlert();
+          const rbs2 = document.getElementById("rainbowSound");
+          rbs2.currentTime = 0; rbs2.play().catch(() => {});
+          break;
+        case 3: // wrench
+          const heal = Math.round(player.maxHp * 0.25);
+          player.hp = Math.min(player.hp + heal, player.maxHp);
+          spawnParticles(player.x, player.y, "#44ff88", 12, 2);
+          spawnTextParticle(player.x, player.y - 1, `+${heal} HP`, "#44ff88");
+          showToast(`🎲 MYSTERY: 🔧 REPAIRED! +${heal} HP`);
+          const ws2 = document.getElementById("wrenchSound");
+          ws2.currentTime = 0; ws2.play().catch(() => {});
+          break;
+      }
+    }
+  }
+}
+
+// ─── 2X CLONE FUNCTIONS ──────────────────────────────────────
+function findNearestTarget(fromX, fromY) {
+  let nearestDist = Infinity, targetX = null, targetY = null;
+  for (const e of enemies) {
+    const d = Math.abs(e.x - fromX) + Math.abs(e.y - fromY);
+    if (d < nearestDist) { nearestDist = d; targetX = e.x; targetY = e.y; }
+  }
+  for (const b of bosses) {
+    const d = Math.abs(b.x - fromX) + Math.abs(b.y - fromY);
+    if (d < nearestDist) { nearestDist = d; targetX = b.x; targetY = b.y; }
+  }
+  for (const d of demons) {
+    const dist = Math.abs(d.x - fromX) + Math.abs(d.y - fromY);
+    if (dist < nearestDist) { nearestDist = dist; targetX = d.x; targetY = d.y; }
+  }
+  for (const a of aliens) {
+    const d = Math.abs(a.x - fromX) + Math.abs(a.y - fromY);
+    if (d < nearestDist) { nearestDist = d; targetX = a.x; targetY = a.y; }
+  }
+  return { targetX, targetY, dist: nearestDist };
+}
+
+function updateClone2x() {
+  // Spawn pickup
+  clone2xPickupSpawn--;
+  if (clone2xPickupSpawn <= 0) {
+    clone2xPickupSpawn = CLONE_2X_SPAWN_INTERVAL;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 8 + Math.floor(Math.random() * 10);
+    const px = player.x + Math.round(Math.cos(angle) * dist);
+    const py = player.y + Math.round(Math.sin(angle) * dist);
+    if (getTile(px, py) === 0) clone2xPickups.push({ x: px, y: py, ttl: 20 * 60 });
+  }
+
+  // Pickup collection
+  for (let i = clone2xPickups.length - 1; i >= 0; i--) {
+    const p = clone2xPickups[i];
+    p.ttl--;
+    if (p.ttl <= 0) { clone2xPickups.splice(i, 1); continue; }
+    if (p.x === player.x && p.y === player.y) {
+      clone2xPickups.splice(i, 1);
+      activeClone = { x: player.x, y: player.y, lifetime: CLONE_2X_LIFETIME, moveTimer: 0, shootTimer: 0 };
+      spawnParticles(player.x, player.y, "#00ffff", 16, 2.5);
+      showToast("🤖×2 CLONE SPAWNED! 60s");
+    }
+  }
+
+  if (!activeClone) return;
+  activeClone.lifetime--;
+  if (activeClone.lifetime <= 0) {
+    spawnParticles(activeClone.x, activeClone.y, "#00ffff", 10, 2);
+    showToast("🤖 Clone expired");
+    activeClone = null;
+    return;
+  }
+
+  const { targetX, targetY } = findNearestTarget(activeClone.x, activeClone.y);
+
+  // Move toward nearest target
+  activeClone.moveTimer--;
+  if (activeClone.moveTimer <= 0 && targetX !== null) {
+    activeClone.moveTimer = CLONE_2X_MOVE_RATE;
+    const dx = Math.sign(targetX - activeClone.x), dy = Math.sign(targetY - activeClone.y);
+    for (const [ndx, ndy] of [[dx, dy],[dx, 0],[0, dy]]) {
+      const nx = activeClone.x + ndx, ny = activeClone.y + ndy;
+      if (getTile(nx, ny) !== "iron") { activeClone.x = nx; activeClone.y = ny; break; }
+    }
+  }
+
+  // Shoot toward nearest target
+  activeClone.shootTimer--;
+  if (activeClone.shootTimer <= 0 && targetX !== null) {
+    activeClone.shootTimer = CLONE_2X_SHOOT_RATE;
+    const ddx = targetX - activeClone.x, ddy = targetY - activeClone.y;
+    const len = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+    const sdx = Math.round(ddx / len), sdy = Math.round(ddy / len);
+    if (sdx !== 0 || sdy !== 0) {
+      projectiles.push({ x: activeClone.x, y: activeClone.y, dx: sdx, dy: sdy, dist: 0, type: "lightning" });
+      spawnParticles(activeClone.x, activeClone.y, "#00ffff", 3, 1.2);
+    }
+  }
+}
+
+// ─── ALIEN SPAWNER SYSTEM ────────────────────────────────────
+function countMushroomsNear(cx, cy, radius) {
+  let count = 0;
+  for (let dx = -radius; dx <= radius; dx++)
+    for (let dy = -radius; dy <= radius; dy++)
+      if (getTileRaw(cx + dx, cy + dy) === "🍄") count++;
+  return count;
+}
+
+function spawnAlienSpawnerAt(x, y) {
+  for (const s of alienSpawners) {
+    if (Math.abs(s.x - x) < 5 && Math.abs(s.y - y) < 5) return;
+    if (s.defeated && Math.abs(s.x - x) < 10 && Math.abs(s.y - y) < 10) return;
+  }
+  alienSpawners.push({ x, y, spawnTimer: 0, hp: ALIEN_SPAWNER_HP, maxHp: ALIEN_SPAWNER_HP, defeated: false });
+  spawnParticles(x, y, "#aa44ff", 16, 2.5);
+  showToast("👽 ALIEN SPAWNER APPEARED!");
+}
+
+function checkMushroomSpawner(mx, my) {
+  // Count mushrooms within 5 tiles of the placed mushroom
+  const count = countMushroomsNear(mx, my, 5);
+  if (count >= 10) spawnAlienSpawnerAt(mx, my);
+}
+
+function updateAliens() {
+  if (peacefulMode) return;
+
+  // Periodically scan mushroom biome for natural spawners
+  alienSpawnerCheckTimer--;
+  if (alienSpawnerCheckTimer <= 0) {
+    alienSpawnerCheckTimer = ALIEN_SPAWNER_CHECK_INTERVAL;
+    // Check tiles near player in mushroom biome
+    for (let dx = -30; dx <= 30; dx += 5) {
+      for (let dy = -30; dy <= 30; dy += 5) {
+        const tx = player.x + dx, ty = player.y + dy;
+        if (biome(tx, ty) === "mushroom") {
+          const count = countMushroomsNear(tx, ty, 5);
+          if (count >= 6 && Math.random() < 0.08) {
+            spawnAlienSpawnerAt(tx, ty);
+          }
+        }
+      }
+    }
+  }
+
+  // Update each spawner
+  for (let i = alienSpawners.length - 1; i >= 0; i--) {
+    const s = alienSpawners[i];
+    // Remove live (non-defeated) spawner if mushrooms are gone
+    if (!s.defeated && countMushroomsNear(s.x, s.y, 8) < 3) {
+      spawnParticles(s.x, s.y, "#aa44ff", 10, 2);
+      alienSpawners.splice(i, 1);
+      continue;
+    }
+    if (s.defeated) continue;
+    // Spawn aliens
+    const myAliens = aliens.filter(a => a.homeX === s.x && a.homeY === s.y);
+    s.spawnTimer--;
+    if (s.spawnTimer <= 0 && myAliens.length < ALIEN_MAX_PER_SPAWNER) {
+      s.spawnTimer = ALIEN_SPAWN_RATE;
+      const type = Math.random() < 0.5 ? 1 : 2;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 2 + Math.floor(Math.random() * 3);
+      const ax = s.x + Math.round(Math.cos(angle) * dist);
+      const ay = s.y + Math.round(Math.sin(angle) * dist);
+      aliens.push({
+        x: ax, y: ay, type,
+        hp: type === 1 ? 2 : 3, maxHp: type === 1 ? 2 : 3,
+        curHp: type === 1 ? 2 : 3,
+        speed: type === 1 ? 25 : 35,
+        dmg: type === 1 ? 5 : 8,
+        xp: type === 1 ? 2 : 3,
+        timer: 0,
+        homeX: s.x, homeY: s.y,
+      });
+    }
+  }
+
+  // Update each alien
+  for (let i = aliens.length - 1; i >= 0; i--) {
+    const a = aliens[i];
+    a.timer--;
+    if (a.timer > 0) continue;
+    a.timer = a.speed;
+
+    const distToHome = Math.abs(a.x - a.homeX) + Math.abs(a.y - a.homeY);
+    const distToPlayer = Math.abs(a.x - player.x) + Math.abs(a.y - player.y);
+
+    let targetX = player.x, targetY = player.y;
+
+    // If too far from home, drift back
+    if (distToHome > ALIEN_ROAM_RADIUS) {
+      targetX = a.homeX; targetY = a.homeY;
+    }
+
+    const dx = Math.sign(targetX - a.x), dy = Math.sign(targetY - a.y);
+    for (const [ndx, ndy] of [[dx, dy],[dx, 0],[0, dy]]) {
+      const nx = a.x + ndx, ny = a.y + ndy;
+      const tile = getTile(nx, ny);
+      if (tile === "iron" || tile === "door" || tile === "yellow_block") continue;
+      if (tile !== 0 && tile !== "lava" && tile !== "🔥" && tile !== "🍄") setTile(nx, ny, 0);
+      a.x = nx; a.y = ny; break;
+    }
+
+    // Damage player
+    if (a.x === player.x && a.y === player.y && player.invincible <= 0) {
+      player.hp -= a.dmg;
+      player.invincible = 20;
+      shakeTimer = 10;
+      playOuch();
+    }
+  }
+}
+
+function updateAlienProjectiles() {
+  // Check lightning/rage hitting aliens
+  for (let i = aliens.length - 1; i >= 0; i--) {
+    const a = aliens[i];
+    for (let j = projectiles.length - 1; j >= 0; j--) {
+      const p = projectiles[j];
+      if (Math.round(p.x) === a.x && Math.round(p.y) === a.y) {
+        a.curHp--;
+        if (a.curHp <= 0) {
+          spawnParticles(a.x, a.y, "#aa44ff", 6, 2);
+          spawnTextParticle(a.x, a.y, `+${a.xp}XP`);
+          xp += a.xp; score += a.xp * 10;
+          aliens.splice(i, 1);
+          checkLevelUp();
+        }
+        projectiles.splice(j, 1);
+        break;
+      }
+    }
+  }
+  // Rage kills aliens in range
+  if (rageTimer > 0 && frameCount % 4 === 0) {
+    for (let i = aliens.length - 1; i >= 0; i--) {
+      const a = aliens[i];
+      if (Math.abs(a.x - player.x) <= 2 && Math.abs(a.y - player.y) <= 2) {
+        spawnParticles(a.x, a.y, "#aa44ff", 5, 1.5);
+        xp += a.xp; score += a.xp * 10;
+        aliens.splice(i, 1);
+        checkLevelUp();
+      }
+    }
+    for (const s of alienSpawners) {
+      if (!s.defeated && Math.abs(s.x - player.x) <= 3 && Math.abs(s.y - player.y) <= 3) {
+        s.hp -= 2;
+        spawnParticles(s.x, s.y, "#ff4400", 3, 1);
+        if (s.hp <= 0) {
+          s.hp = 0; s.defeated = true;
+          spawnParticles(s.x, s.y, "#aa44ff", 16, 2.5);
+          showToast("👽 ALIEN SPAWNER DESTROYED!");
+        }
+      }
+    }
+  }
+  // Purple kills aliens
+  if (purpleTimer > 0 && frameCount % 6 === 0) {
+    for (let i = aliens.length - 1; i >= 0; i--) {
+      spawnParticles(aliens[i].x, aliens[i].y, "#cc44ff", 4, 1.5);
+      xp += aliens[i].xp; score += aliens[i].xp * 10;
+      aliens.splice(i, 1);
+      checkLevelUp();
+    }
+    for (const s of alienSpawners) {
+      if (!s.defeated) {
+        s.hp -= 3;
+        spawnParticles(s.x, s.y, "#cc44ff", 4, 1.5);
+        if (s.hp <= 0) {
+          s.hp = 0; s.defeated = true;
+          spawnParticles(s.x, s.y, "#aa44ff", 16, 2.5);
+          showToast("👽 ALIEN SPAWNER DESTROYED!");
+        }
+      }
+    }
+  }
+}
+
+// ─── MINI GAME ───────────────────────────────────────────────
+let miniActive = false;
+let miniRaf = null;
+let miniKeys = {};
+
+const miniGame = {
+  bgImg: null, bgPixels: null, bgW: 500, bgH: 600,
+  bgVisualImg: null,
+  px: 0, py: 0, pvx: 0, pvy: 0, pW: 40, pH: 40, onGround: false,
+  playerImg: null,
+  bx: 0, by: 0, bvx: 1.5, bW: 48, bH: 48, badImg: null, bFloor: 0,
+  b2x: 0, b2y: 0, b2vx: 1.5, b2vy: 0, b2W: 48, b2H: 48, bad2Img: null, b2onGround: false, b2found: false,
+  goalX: 0, goalY: 0, goalW: 32, goalH: 32,
+};
+
+function miniColorAt(x, y) {
+  if (!miniGame.bgPixels) return null;
+  const xi = Math.round(x), yi = Math.round(y);
+  if (xi < 0 || xi >= miniGame.bgW || yi < 0 || yi >= miniGame.bgH) return null;
+  const idx = (yi * miniGame.bgW + xi) * 4;
+  const d = miniGame.bgPixels.data;
+  return { r: d[idx], g: d[idx+1], b: d[idx+2] };
+}
+function miniColorMatch(c, r, g, b, tol = 40) {
+  if (!c) return false;
+  return Math.abs(c.r-r)<tol && Math.abs(c.g-g)<tol && Math.abs(c.b-b)<tol;
+}
+function miniIsGround(x, y) {
+  return miniColorMatch(miniColorAt(x, y), 0, 255, 0);
+}
+
+function openMiniGame() {
+  if (miniActive) return;
+  miniActive = true;
+  if (!paused) { paused = true; document.getElementById("bgMusic").pause(); }
+  document.getElementById("miniGameOverlay").style.display = "flex";
+  miniKeys = {};
+  const mg = miniGame;
+  const mc = document.getElementById("miniCanvas");
+  const mctx = mc.getContext("2d");
+
+  // Preload all four images, start loop only when all are ready
+  let loaded = 0;
+  const total = 5;
+  function onLoad() {
+    loaded++;
+    if (loaded < total) return;
+    // All loaded — scan background for color markers
+    const off = document.createElement("canvas");
+    off.width = mg.bgW; off.height = mg.bgH;
+    const octx = off.getContext("2d");
+    octx.drawImage(mg.bgImg, 0, 0, mg.bgW, mg.bgH);
+    mg.bgPixels = octx.getImageData(0, 0, mg.bgW, mg.bgH);
+    let spawnFound = false, goalFound = false, enemyFound = false, enemy2Found = false;
+    for (let y = 0; y < mg.bgH && !(spawnFound && goalFound && enemyFound && enemy2Found); y++) {
+      for (let x = 0; x < mg.bgW; x++) {
+        const c = miniColorAt(x, y);
+        if (!spawnFound && miniColorMatch(c, 0, 0, 255))   { mg.px = x - mg.pW/2; mg.py = y - mg.pH; spawnFound = true; }
+        if (!goalFound  && miniColorMatch(c, 0, 255, 255)) { mg.goalX = x - mg.goalW/2; mg.goalY = y - mg.goalH; goalFound = true; }
+        if (!enemyFound && miniColorMatch(c, 255, 0, 0)) {
+          let dropY = y;
+          while (dropY < mg.bgH && !miniColorMatch(miniColorAt(x, dropY), 0, 255, 0)) dropY++;
+          mg.bx = x - mg.bW/2; mg.by = dropY - mg.bH; enemyFound = true;
+        }
+        if (!enemy2Found && miniColorMatch(c, 255, 255, 0)) {
+          // b2 starts at yellow marker, falls with gravity — no snap needed
+          mg.b2x = x - mg.b2W/2; mg.b2y = y - mg.b2H;
+          mg.b2vy = 0; mg.b2found = true; enemy2Found = true;
+        }
+      }
+    }
+    mg.pvx = 0; mg.pvy = 0;
+    mg.bFloor = mg.by + mg.bH;
+    startMiniLoop(mc, mctx);
+  }
+
+  mg.bgImg = new Image();
+  mg.bgImg.onload = onLoad;
+  mg.bgImg.src = 'png/minigamebg.png';
+
+  mg.playerImg = new Image();
+  mg.playerImg.onload = onLoad;
+  mg.playerImg.src = 'png/bossfavicon.png';
+
+  mg.badImg = new Image();
+  mg.badImg.onload = onLoad;
+  mg.badImg.src = 'png/badguy.png';
+
+  mg.bad2Img = new Image();
+  mg.bad2Img.onload = onLoad;
+  mg.bad2Img.src = 'png/badguy2.png';
+
+  mg.bgVisualImg = new Image();
+  mg.bgVisualImg.onload = onLoad;
+  mg.bgVisualImg.src = 'png/minigamebg_visual.png';
+
+  document.addEventListener("keydown", miniKeyDown);
+  document.addEventListener("keyup", miniKeyUp);
+}
+
+function miniKeyDown(e) {
+  miniKeys[e.key.toLowerCase()] = true;
+  if (e.key === " " || e.key.startsWith("Arrow")) e.preventDefault();
+}
+function miniKeyUp(e) { miniKeys[e.key.toLowerCase()] = false; }
+
+function startMiniLoop(mc, mctx) {
+  const mg = miniGame;
+  const GRAV = 0.5, JUMP = -11, SPEED = 3;
+  function miniLoop() {
+    if (!miniActive) return;
+    miniRaf = requestAnimationFrame(miniLoop);
+    const left  = miniKeys["arrowleft"]  || miniKeys["a"];
+    const right = miniKeys["arrowright"] || miniKeys["d"];
+    const jump  = miniKeys[" "] || miniKeys["arrowup"] || miniKeys["w"];
+    mg.pvx = left ? -SPEED : right ? SPEED : 0;
+    if (jump && mg.onGround) mg.pvy = JUMP;
+    mg.pvy += GRAV;
+    mg.px += mg.pvx; mg.py += mg.pvy;
+    mg.onGround = false;
+    if (mg.pvy >= 0) {
+      for (let cx = mg.px; cx <= mg.px + mg.pW; cx += 4) {
+        if (miniIsGround(cx, mg.py + mg.pH)) {
+          while (miniIsGround(cx, mg.py + mg.pH - 1)) mg.py--;
+          mg.pvy = 0; mg.onGround = true; break;
+        }
+      }
+    }
+    mg.px = Math.max(0, Math.min(mg.bgW - mg.pW, mg.px));
+    if (mg.py < 0) { mg.py = 0; mg.pvy = 0; }
+    if (mg.py + mg.pH > mg.bgH) { mg.py = mg.bgH - mg.pH; mg.pvy = 0; mg.onGround = true; }
+    // Bad guy patrol — reverse if ground ends ahead or canvas edge reached
+    mg.bx += mg.bvx;
+    const bCheckX = mg.bvx > 0 ? mg.bx + mg.bW + 2 : mg.bx - 2;
+    const groundAhead = miniIsGround(bCheckX, mg.bFloor + 2);
+    const atEdge = mg.bx <= 0 || mg.bx + mg.bW >= mg.bgW;
+    if (!groundAhead || atEdge) {
+      mg.bvx *= -1;
+      // Clamp to canvas bounds
+      mg.bx = Math.max(0, Math.min(mg.bgW - mg.bW, mg.bx));
+    }
+    // Bad guy 2 — falls with gravity, no chasing
+    if (mg.b2found) {
+      mg.b2vy += GRAV;
+      mg.b2x += mg.b2vx;
+      mg.b2y += mg.b2vy;
+      // Ground collision for b2
+      mg.b2onGround = false;
+      if (mg.b2vy >= 0) {
+        for (let cx = mg.b2x; cx <= mg.b2x + mg.b2W; cx += 4) {
+          if (miniIsGround(cx, mg.b2y + mg.b2H)) {
+            while (miniIsGround(cx, mg.b2y + mg.b2H - 1)) mg.b2y--;
+            mg.b2vy = 0; mg.b2onGround = true; break;
+          }
+        }
+      }
+      // Canvas edge bounce
+      if (mg.b2x <= 0) { mg.b2x = 0; mg.b2vx = Math.abs(mg.b2vx); }
+      if (mg.b2x + mg.b2W >= mg.bgW) { mg.b2x = mg.bgW - mg.b2W; mg.b2vx = -Math.abs(mg.b2vx); }
+      if (mg.b2y + mg.b2H > mg.bgH) { mg.b2y = mg.bgH - mg.b2H; mg.b2vy = 0; }
+
+      // b2 vs b1 collision — both reverse direction like hitting a wall
+      if (mg.b2x < mg.bx+mg.bW && mg.b2x+mg.b2W > mg.bx && mg.b2y < mg.by+mg.bH && mg.b2y+mg.b2H > mg.by) {
+        mg.b2vx *= -1; mg.bvx *= -1;
+        mg.b2x += mg.b2vx * 2; mg.bx += mg.bvx * 2;
+      }
+
+      // Player vs b2
+      if (mg.px < mg.b2x+mg.b2W && mg.px+mg.pW > mg.b2x && mg.py < mg.b2y+mg.b2H && mg.py+mg.pH > mg.b2y) { closeMiniGame(false); return; }
+    }
+    if (mg.px < mg.bx+mg.bW && mg.px+mg.pW > mg.bx && mg.py < mg.by+mg.bH && mg.py+mg.pH > mg.by) { closeMiniGame(false); return; }
+    // Collision: player vs goal
+    if (mg.px < mg.goalX+mg.goalW && mg.px+mg.pW > mg.goalX && mg.py < mg.goalY+mg.goalH && mg.py+mg.pH > mg.goalY) { closeMiniGame(true); return; }
+    // Draw
+    mctx.clearRect(0, 0, mg.bgW, mg.bgH);
+    mctx.drawImage(mg.bgImg, 0, 0, mg.bgW, mg.bgH);
+    if (mg.bgVisualImg) mctx.drawImage(mg.bgVisualImg, 0, 0, mg.bgW, mg.bgH);
+    // Bad guy (flip when moving left)
+    mctx.save();
+    if (mg.bvx < 0) { mctx.translate(mg.bx + mg.bW, mg.by); mctx.scale(-1,1); mctx.drawImage(mg.badImg, 0, 0, mg.bW, mg.bH); }
+    else { mctx.drawImage(mg.badImg, mg.bx, mg.by, mg.bW, mg.bH); }
+    mctx.restore();
+    // Bad guy 2 — flip when going left (sprite faces right naturally)
+    if (mg.b2found) {
+      mctx.save();
+      if (mg.b2vx < 0) {
+        mctx.translate(mg.b2x + mg.b2W, mg.b2y);
+        mctx.scale(-1, 1);
+        mctx.drawImage(mg.bad2Img, 0, 0, mg.b2W, mg.b2H);
+      } else {
+        mctx.drawImage(mg.bad2Img, mg.b2x, mg.b2y, mg.b2W, mg.b2H);
+      }
+      mctx.restore();
+    }
+    // Player
+    mctx.drawImage(mg.playerImg, mg.px, mg.py, mg.pW, mg.pH);
+  }
+  miniRaf = requestAnimationFrame(miniLoop);
+}
+
+function closeMiniGame(won) {
+  if (!miniActive) return;
+  miniActive = false;
+  if (miniRaf) { cancelAnimationFrame(miniRaf); miniRaf = null; }
+  document.removeEventListener("keydown", miniKeyDown);
+  document.removeEventListener("keyup", miniKeyUp);
+  document.getElementById("miniGameOverlay").style.display = "none";
+  paused = false;
+  document.getElementById("bgMusic").play().catch(() => {});
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  loop();
+  if (won && miniGameFromAxer && !hasKey) {
+    hasKey = true;
+    document.getElementById("keySection").style.display = "flex";
+    document.getElementById("keySep").style.display = "";
+    placeYellowFenceFarAway();
+    showToast("🔑 KEY OBTAINED! Axer is impressed.", 3500);
+  } else if (won) {
+    showToast("🎮 Mini-Game completed!", 3000);
+  }
+  miniGameFromAxer = false;
+}
+
+let rafId = null;
 
 function loop() {
   if (!gameStarted || paused) return;
   frameCount++;
   handleMovement();
   handleActions();
+  updateFires();
   updateEnemies();
   updateBosses();
   updateProjectiles();
   updateRage();
   updatePurple();
   updateWrench();
+  updateBait();
   updateRainbow();
+  updateMystery();
+  updateClone2x();
   updateDemons();
+  updateAliens();
+  updateAlienProjectiles();
+  updateCorruptedHearts();
+  updateCorruptedProjectiles();
+  updateFenceCompounds();
   updateParticles();
   updateDayNight();
   updateCooldowns();
   draw();
-  requestAnimationFrame(loop);
+  rafId = requestAnimationFrame(loop);
 }
 
-function startGame() {
-  _deadPlayed = false;
+function showSkinScreen(peaceful) {
   document.getElementById("titleScreen").style.display = "none";
+  const screen = document.getElementById("skinScreen");
+  screen.style.display = "flex";
+  screen._peaceful = peaceful;
+
+  const skins = [
+    { file: 'png/bossfavicon.png',        label: 'ROBOT' },
+    { file: 'png/fire_bossfavicon.png',   label: 'FIRE' },
+    { file: 'png/pirate_bossfavicon.png', label: 'PIRATE' },
+    { file: 'png/she_bossfavicon.png',    label: 'SHE-BOT' },
+    { file: 'png/gold_bossfavicon.png',   label: 'GOLD' },
+    { file: 'png/purple_bossfavicon.png', label: 'PURPLE' },
+    { file: 'png/blue_bossfavicon.png',   label: 'BLUE' },
+    { file: 'png/ghost_bossfavicon.png',          label: 'GHOST' },
+    { file: 'png/whiterabbit_bossfavicon.png',    label: 'W.RABBIT' },
+    { file: 'png/santa_bossfavicon.png',          label: 'SANTA' },
+    { file: 'png/coolguy_bossfavicon.png',        label: 'COOL GUY' },
+  ];
+
+  const container = document.getElementById("skinOptions");
+  container.innerHTML = '';
+  skins.forEach(s => {
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;padding:16px;border:2px solid #1a4a1a;transition:all 0.15s;";
+    wrap.dataset.skin = s.file;
+    if (s.file === selectedSkin) {
+      wrap.style.borderColor = "#88ff88";
+      wrap.style.boxShadow = "0 0 16px #44aa44";
+    }
+    const img = document.createElement("img");
+    img.src = s.file;
+    img.style.cssText = "width:96px;height:96px;image-rendering:pixelated;";
+    const lbl = document.createElement("div");
+    lbl.textContent = s.label;
+    lbl.style.cssText = "font-family:'Press Start 2P',monospace;font-size:9px;color:#88ff88;letter-spacing:1px;";
+    wrap.appendChild(img); wrap.appendChild(lbl);
+    wrap.addEventListener("click", () => {
+      selectedSkin = s.file;
+      playerImg.src = s.file;
+      screen.style.display = "none";
+      launchGame(screen._peaceful);
+    });
+    container.appendChild(wrap);
+  });
+}
+
+function launchGame(peaceful = false) {
+  peacefulMode = !!peaceful;
+  try {
+    const el = document.documentElement;
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (fn) { const p = fn.call(el); if (p && p.catch) p.catch(() => {}); }
+  } catch(_) {}
+  if (tabletMode) {
+    document.getElementById("controls").style.display = "none";
+    document.getElementById("touchControls").style.display = "block";
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      document.querySelector('meta[name="viewport"]').content =
+        "width=device-width, initial-scale=0.6, maximum-scale=0.6, user-scalable=no";
+      document.body.classList.add("ios-tablet");
+    }
+  }
+  _deadPlayed = false;
   for (let i = 0; i < 15; i++) spawnStructure("room");
   for (let i = 0; i < 10; i++) spawnStructure("cross");
   for (let x = -12; x <= 12; x++)
     for (let y = -12; y <= 12; y++) getTile(x, y);
+  placeFenceCompoundNearSpawn();
   const music = document.getElementById("bgMusic");
   music.volume = 0.3;
   music.play().catch(() => {});
@@ -1419,7 +3991,11 @@ function startGame() {
   loop();
 }
 
-document.getElementById("startBtn").onclick = startGame;
+function startGame(peaceful = false) {
+  showSkinScreen(peaceful);
+}
+
+document.getElementById("startBtn").onclick = () => startGame(false);
 </script>
 </body>
 </html>
